@@ -25,3 +25,4 @@ public class User
     public ICollection<Report> SubmittedReports { get; set; } = new List<Report>();
     public ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
 }
+

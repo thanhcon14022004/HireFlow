@@ -29,3 +29,4 @@ public class ApplicationStatusHistory
     public Application Application { get; set; } = null!;
     public User ChangedByUser { get; set; } = null!;
 }
+

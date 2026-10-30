@@ -137,3 +137,4 @@ public class AuditLogDto
     public string? Details { get; set; }
     public DateTime CreatedAt { get; set; }
 }
+

@@ -70,3 +70,4 @@ public class CreditPurchase
     public User User { get; set; } = null!;
     public CreditPackage? Package { get; set; }
 }
+

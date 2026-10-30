@@ -46,3 +46,4 @@ public class FreelancerDocument
     public User Freelancer { get; set; } = null!;
     public ICollection<Application> Applications { get; set; } = new List<Application>();
 }
+

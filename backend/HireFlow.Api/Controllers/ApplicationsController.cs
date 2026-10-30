@@ -380,3 +380,4 @@ public class ApplicationsController : ControllerBase
         return Ok(new { message = $"Đã cập nhật trạng thái hồ sơ thành '{normalizedStatus}'.", status = normalizedStatus });
     }
 }
+

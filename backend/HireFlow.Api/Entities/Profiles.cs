@@ -36,3 +36,4 @@ public class EmployerProfile
 
     public User User { get; set; } = null!;
 }
+

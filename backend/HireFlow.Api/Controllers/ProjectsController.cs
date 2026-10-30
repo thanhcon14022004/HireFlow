@@ -372,3 +372,4 @@ public class ProjectsController : ControllerBase
         return Ok(new { message = "Đã đóng dự án. Dự án sẽ không nhận thêm ứng tuyển mới." });
     }
 }
+

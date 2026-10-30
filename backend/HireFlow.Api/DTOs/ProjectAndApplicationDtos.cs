@@ -120,3 +120,4 @@ public class ApplicationStatusHistoryDto
     public string ChangedByUserName { get; set; } = string.Empty;
     public DateTime ChangedAt { get; set; }
 }
+

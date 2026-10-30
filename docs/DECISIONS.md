@@ -55,3 +55,4 @@ This document records the architectural and business decisions made for unspecif
 ## 10. Database Concurrency & Atomicity
 - **Requirement:** Section 8 – Atomic deductions, no negative balances.
 - **Decision:** All credit operations execute inside EF Core database transactions with row-level locks or explicit concurrency checks (`Balance >= cost` in update predicate). Transactions record corresponding audit rows in `CreditTransactions` with matching `ReferenceType` and `ReferenceId`.
+

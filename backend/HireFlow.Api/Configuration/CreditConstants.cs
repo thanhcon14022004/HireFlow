@@ -7,3 +7,4 @@ public static class CreditConstants
     public const int ContactUnlockCost = 4;
     public const int EditProjectCost = 0;
 }
+

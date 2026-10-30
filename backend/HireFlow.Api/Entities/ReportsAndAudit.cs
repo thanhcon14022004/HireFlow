@@ -42,3 +42,4 @@ public class PasswordResetToken
 
     public User User { get; set; } = null!;
 }
+

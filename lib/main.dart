@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'core/constants/app_colors.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/app_providers.dart';
+import 'providers/chat_provider.dart';
 import 'screens/admin/admin_views.dart';
 import 'screens/auth/auth_screens.dart';
 import 'screens/employer/employer_views.dart';
@@ -27,6 +28,7 @@ class HireFlowApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => DocumentProvider()),
         ChangeNotifierProvider(create: (_) => CreditProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProvider(create: (_) => ChatProvider()),
       ],
       child: MaterialApp(
         title: 'HireFlow',

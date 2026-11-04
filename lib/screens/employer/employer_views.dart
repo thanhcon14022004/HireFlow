@@ -7,8 +7,11 @@ import '../../providers/app_providers.dart';
 import '../../services/app_services.dart';
 import '../../widgets/common_widgets.dart';
 import '../../widgets/skeleton_widgets.dart';
+import '../../providers/chat_provider.dart';
 import '../common/cv_document_viewer_screen.dart';
 import '../common/wallet_and_dialogs.dart';
+import '../common/chat_screen.dart';
+import '../common/conversations_list_screen.dart';
 
 class EmployerHomeScreen extends StatefulWidget {
   const EmployerHomeScreen({super.key});
@@ -84,6 +87,43 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
           ],
         ),
         actions: [
+          Consumer<ChatProvider>(
+            builder: (context, chat, _) {
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.chat_outlined, size: 22, color: AppColors.textPrimary),
+                    tooltip: 'Tin nhắn & Trao đổi',
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ConversationsListScreen()),
+                      );
+                    },
+                  ),
+                  if (chat.totalUnreadCount > 0)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: AppColors.error,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                        child: Text(
+                          chat.totalUnreadCount > 9 ? '9+' : '${chat.totalUnreadCount}',
+                          style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.account_balance_wallet_outlined, size: 22, color: AppColors.textPrimary),
             tooltip: 'Ví Credit',
@@ -1282,6 +1322,37 @@ class _EmployerProjectDetailScreenState extends State<EmployerProjectDetailScree
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                   ),
                                   child: const Text('Trạng thái', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
+                                ),
+                                const SizedBox(width: 6),
+
+                                // Chat with Applicant Button
+                                IconButton(
+                                  icon: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.primary, size: 19),
+                                  tooltip: 'Nhắn tin với ứng viên',
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: AppColors.primaryLight,
+                                    padding: const EdgeInsets.all(8),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                  onPressed: () async {
+                                    final chatProvider = context.read<ChatProvider>();
+                                    final conv = await chatProvider.startConversation(
+                                      projectId: widget.projectId,
+                                      freelancerId: app.freelancerId,
+                                    );
+                                    if (conv != null && context.mounted) {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) => ChatScreen(
+                                            conversationId: conv.conversationId,
+                                            otherPartyName: conv.otherPartyName,
+                                            otherPartyRole: conv.otherPartyRole,
+                                            projectTitle: conv.projectTitle,
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  },
                                 ),
                               ],
                             ),

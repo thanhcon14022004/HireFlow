@@ -356,5 +356,49 @@ public class BusinessRuleAndSecurityTests
         Assert.Equal("Paid", updatedPurchase!.Status);
         Assert.NotNull(updatedPurchase.PaidAt);
     }
-}
 
+    [Fact]
+    public async Task SavedProjects_ShouldSave_And_PreventDuplicate_And_AllowUnsave()
+    {
+        var db = CreateInMemoryDbContext(nameof(SavedProjects_ShouldSave_And_PreventDuplicate_And_AllowUnsave));
+        var freelancer = new User { FullName = "Free Lancer", Email = "fl_save@hireflow.com", Role = "Freelancer" };
+        var employer = new User { FullName = "Emp Loyee", Email = "emp_save@hireflow.com", Role = "Employer" };
+        db.Users.AddRange(freelancer, employer);
+        await db.SaveChangesAsync();
+
+        var project = new Project
+        {
+            EmployerId = employer.UserId,
+            Title = "Flutter Mobile Dev",
+            Description = "Need Flutter developer for mobile app",
+            Status = "Open"
+        };
+        db.Projects.Add(project);
+        await db.SaveChangesAsync();
+
+        // 1. Initially not saved
+        var isSavedBefore = await db.SavedProjects.AnyAsync(sp => sp.FreelancerId == freelancer.UserId && sp.ProjectId == project.ProjectId);
+        Assert.False(isSavedBefore);
+
+        // 2. Save project
+        db.SavedProjects.Add(new SavedProject
+        {
+            FreelancerId = freelancer.UserId,
+            ProjectId = project.ProjectId,
+            SavedAt = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        var isSavedAfter = await db.SavedProjects.AnyAsync(sp => sp.FreelancerId == freelancer.UserId && sp.ProjectId == project.ProjectId);
+        Assert.True(isSavedAfter);
+
+        // 3. Unsave project
+        var savedRecord = await db.SavedProjects.FirstOrDefaultAsync(sp => sp.FreelancerId == freelancer.UserId && sp.ProjectId == project.ProjectId);
+        Assert.NotNull(savedRecord);
+        db.SavedProjects.Remove(savedRecord!);
+        await db.SaveChangesAsync();
+
+        var isSavedAfterUnsave = await db.SavedProjects.AnyAsync(sp => sp.FreelancerId == freelancer.UserId && sp.ProjectId == project.ProjectId);
+        Assert.False(isSavedAfterUnsave);
+    }
+}

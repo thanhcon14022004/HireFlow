@@ -37,6 +37,8 @@ class ApiConstants {
   static const String projects = '/api/projects';
   static String projectDetail(int id) => '/api/projects/$id';
   static String closeProject(int id) => '/api/projects/$id/close';
+  static String saveProject(int id) => '/api/projects/$id/save';
+  static const String savedProjects = '/api/projects/saved';
 
   // Application endpoints
   static String applyProject(int projectId) => '/api/projects/$projectId/applications';

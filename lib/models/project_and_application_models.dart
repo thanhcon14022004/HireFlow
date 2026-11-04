@@ -23,6 +23,7 @@ class ProjectModel {
   final bool hasApplied;
   final int? myApplicationId;
   final String? myApplicationStatus;
+  final bool isSaved;
 
   ProjectModel({
     required this.projectId,
@@ -47,6 +48,7 @@ class ProjectModel {
     this.hasApplied = false,
     this.myApplicationId,
     this.myApplicationStatus,
+    this.isSaved = false,
   });
 
   factory ProjectModel.fromJson(Map<String, dynamic> json) {
@@ -73,6 +75,7 @@ class ProjectModel {
       hasApplied: json['hasApplied'] == true,
       myApplicationId: json['myApplicationId'],
       myApplicationStatus: json['myApplicationStatus'],
+      isSaved: json['isSaved'] == true,
     );
   }
 
@@ -105,6 +108,7 @@ class ProjectModel {
     bool? hasApplied,
     int? myApplicationId,
     String? myApplicationStatus,
+    bool? isSaved,
   }) {
     return ProjectModel(
       projectId: projectId ?? this.projectId,
@@ -129,6 +133,7 @@ class ProjectModel {
       hasApplied: hasApplied ?? this.hasApplied,
       myApplicationId: myApplicationId ?? this.myApplicationId,
       myApplicationStatus: myApplicationStatus ?? this.myApplicationStatus,
+      isSaved: isSaved ?? this.isSaved,
     );
   }
 }

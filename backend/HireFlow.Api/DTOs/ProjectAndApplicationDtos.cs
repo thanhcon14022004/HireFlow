@@ -23,6 +23,7 @@ public class ProjectSummaryDto
     public bool HasApplied { get; set; }
     public int? MyApplicationId { get; set; }
     public string? MyApplicationStatus { get; set; }
+    public bool IsSaved { get; set; }
 }
 
 public class ProjectDetailDto : ProjectSummaryDto

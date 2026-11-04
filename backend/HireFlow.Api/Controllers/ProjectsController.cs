@@ -100,8 +100,12 @@ public class ProjectsController : ControllerBase
         var page = filter.Page < 1 ? 1 : filter.Page;
         var pageSize = filter.PageSize is < 1 or > 50 ? 10 : filter.PageSize;
 
-        var currentUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+var currentUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
         int.TryParse(currentUserIdStr, out var currentUserId);
+
+        var savedProjectIds = currentUserId > 0
+            ? await _db.SavedProjects.Where(sp => sp.FreelancerId == currentUserId).Select(sp => sp.ProjectId).ToListAsync()
+            : new List<int>();
 
         var items = await query
             .OrderByDescending(p => p.CreatedAt)
@@ -131,9 +135,10 @@ public class ProjectsController : ControllerBase
                 MyApplicationStatus = currentUserId > 0
                     ? p.Applications.Where(a => a.FreelancerId == currentUserId).Select(a => a.Status).FirstOrDefault()
                     : null,
-                MyApplicationId = currentUserId > 0
+MyApplicationId = currentUserId > 0
                     ? p.Applications.Where(a => a.FreelancerId == currentUserId).Select(a => (int?)a.ApplicationId).FirstOrDefault()
-                    : null
+                    : null,
+                IsSaved = currentUserId > 0 && savedProjectIds.Contains(p.ProjectId)
             })
             .ToListAsync();
 
@@ -163,8 +168,12 @@ public class ProjectsController : ControllerBase
         }
 
         var role = User.FindFirstValue(ClaimTypes.Role);
-        var currentUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+var currentUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
         int.TryParse(currentUserIdStr, out var currentUserId);
+
+        var savedProjectIds = currentUserId > 0
+            ? await _db.SavedProjects.Where(sp => sp.FreelancerId == currentUserId).Select(sp => sp.ProjectId).ToListAsync()
+            : new List<int>();
 
         // Moderated project access check
         if ((project.Status == "Hidden" || project.Status == "Removed") && role != "Admin" && project.EmployerId != currentUserId)
@@ -173,8 +182,9 @@ public class ProjectsController : ControllerBase
         }
 
         var isOwner = (currentUserId > 0 && project.EmployerId == currentUserId);
-        var isUnlocked = false;
+var isUnlocked = false;
         var hasApplied = false;
+        var isSaved = false;
         int? myApplicationId = null;
         string? myApplicationStatus = null;
 
@@ -195,8 +205,9 @@ public class ProjectsController : ControllerBase
                     myApplicationStatus = app.Status;
                 }
 
-                // Rule: Candidate must apply to project to unlock employer contact details
+// Rule: Candidate must apply to project to unlock employer contact details
                 isUnlocked = hasApplied;
+                isSaved = await _db.SavedProjects.AnyAsync(sp => sp.FreelancerId == currentUserId && sp.ProjectId == projectId);
             }
         }
 
@@ -227,7 +238,8 @@ public class ProjectsController : ControllerBase
             ContactPhone = isUnlocked ? empProfile?.ContactPhone : null,
             HasApplied = hasApplied,
             MyApplicationId = myApplicationId,
-            MyApplicationStatus = myApplicationStatus
+MyApplicationStatus = myApplicationStatus,
+            IsSaved = isSaved
         };
 
         return Ok(detail);
@@ -437,5 +449,105 @@ public class ProjectsController : ControllerBase
 
         return Ok(new { message = "Đã đóng dự án. Dự án sẽ không nhận thêm ứng tuyển mới." });
     }
-}
 
+    [HttpPost("{projectId}/save")]
+    [Authorize(Roles = "Freelancer")]
+    public async Task<IActionResult> SaveProject(int projectId)
+    {
+        var currentUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!int.TryParse(currentUserIdStr, out var currentUserId))
+        {
+            throw new AppException("Không tìm thấy thông tin tài khoản.", "UNAUTHORIZED", System.Net.HttpStatusCode.Unauthorized);
+        }
+
+        var project = await _db.Projects.FirstOrDefaultAsync(p => p.ProjectId == projectId);
+        if (project == null || project.Status == "Removed")
+        {
+            throw new AppException("Dự án không tồn tại.", "PROJECT_NOT_FOUND", System.Net.HttpStatusCode.NotFound);
+        }
+
+        var existing = await _db.SavedProjects.FirstOrDefaultAsync(sp => sp.FreelancerId == currentUserId && sp.ProjectId == projectId);
+        if (existing == null)
+        {
+            _db.SavedProjects.Add(new SavedProject
+            {
+                FreelancerId = currentUserId,
+                ProjectId = projectId,
+                SavedAt = DateTime.UtcNow
+            });
+            await _db.SaveChangesAsync();
+        }
+
+        return Ok(new { message = "Đã lưu dự án vào danh sách quan tâm thành công.", isSaved = true });
+    }
+
+    [HttpDelete("{projectId}/save")]
+    [Authorize(Roles = "Freelancer")]
+    public async Task<IActionResult> UnsaveProject(int projectId)
+    {
+        var currentUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!int.TryParse(currentUserIdStr, out var currentUserId))
+        {
+            throw new AppException("Không tìm thấy thông tin tài khoản.", "UNAUTHORIZED", System.Net.HttpStatusCode.Unauthorized);
+        }
+
+        var existing = await _db.SavedProjects.FirstOrDefaultAsync(sp => sp.FreelancerId == currentUserId && sp.ProjectId == projectId);
+        if (existing != null)
+        {
+            _db.SavedProjects.Remove(existing);
+            await _db.SaveChangesAsync();
+        }
+
+        return Ok(new { message = "Đã bỏ lưu dự án.", isSaved = false });
+    }
+
+    [HttpGet("saved")]
+    [Authorize(Roles = "Freelancer")]
+    public async Task<IActionResult> GetSavedProjects()
+    {
+        var currentUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!int.TryParse(currentUserIdStr, out var currentUserId))
+        {
+            throw new AppException("Không tìm thấy thông tin tài khoản.", "UNAUTHORIZED", System.Net.HttpStatusCode.Unauthorized);
+        }
+
+        var items = await _db.SavedProjects
+            .Where(sp => sp.FreelancerId == currentUserId)
+            .OrderByDescending(sp => sp.SavedAt)
+            .Include(sp => sp.Project)
+                .ThenInclude(p => p.Skills)
+            .Include(sp => sp.Project)
+                .ThenInclude(p => p.Applications)
+            .Include(sp => sp.Project)
+                .ThenInclude(p => p.Employer)
+                    .ThenInclude(e => e.EmployerProfile)
+            .Select(sp => new ProjectSummaryDto
+            {
+                ProjectId = sp.Project.ProjectId,
+                EmployerId = sp.Project.EmployerId,
+                EmployerName = sp.Project.Employer.EmployerProfile != null && !string.IsNullOrEmpty(sp.Project.Employer.EmployerProfile.PublicDisplayName)
+                    ? sp.Project.Employer.EmployerProfile.PublicDisplayName
+                    : sp.Project.Employer.FullName,
+                CompanyName = sp.Project.Employer.EmployerProfile != null ? sp.Project.Employer.EmployerProfile.CompanyName : null,
+                Title = sp.Project.Title,
+                Description = sp.Project.Description,
+                BudgetMin = sp.Project.BudgetMin,
+                BudgetMax = sp.Project.BudgetMax,
+                CurrencyCode = sp.Project.CurrencyCode,
+                ExperienceLevel = sp.Project.ExperienceLevel,
+                Deadline = sp.Project.Deadline,
+                Status = sp.Project.Status,
+                CreatedAt = sp.Project.CreatedAt,
+                PublishedAt = sp.Project.PublishedAt,
+                Skills = sp.Project.Skills.Select(s => s.SkillName).ToList(),
+                ApplicantCount = sp.Project.Applications.Count,
+                HasApplied = sp.Project.Applications.Any(a => a.FreelancerId == currentUserId),
+                MyApplicationStatus = sp.Project.Applications.Where(a => a.FreelancerId == currentUserId).Select(a => a.Status).FirstOrDefault(),
+                MyApplicationId = sp.Project.Applications.Where(a => a.FreelancerId == currentUserId).Select(a => (int?)a.ApplicationId).FirstOrDefault(),
+                IsSaved = true
+            })
+            .ToListAsync();
+
+        return Ok(new { items, totalCount = items.Count });
+    }
+}

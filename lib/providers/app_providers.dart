@@ -206,17 +206,68 @@ class AuthProvider extends ChangeNotifier {
 
 class ProjectProvider extends ChangeNotifier {
   List<ProjectModel> _projects = [];
+  List<ProjectModel> _savedProjects = [];
   List<ProjectModel> _myEmployerProjects = [];
   ProjectModel? _currentProject;
   bool _isLoading = false;
   String? _errorMessage;
 
   List<ProjectModel> get projects => _projects;
+  List<ProjectModel> get savedProjects => _savedProjects;
   List<ProjectModel> get myEmployerProjects => _myEmployerProjects;
   List<ProjectModel> get employerProjects => _myEmployerProjects;
   ProjectModel? get currentProject => _currentProject;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+
+  Future<void> fetchSavedProjects() async {
+    try {
+      _savedProjects = await ProjectService.getSavedProjects();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error fetching saved projects: ');
+    }
+  }
+
+  Future<bool> toggleSaveProject(int projectId) async {
+    final idx = _projects.indexWhere((p) => p.projectId == projectId);
+    bool currentSaved = false;
+    if (idx != -1) {
+      currentSaved = _projects[idx].isSaved;
+      _projects[idx] = _projects[idx].copyWith(isSaved: !currentSaved);
+    }
+    if (_currentProject?.projectId == projectId) {
+      currentSaved = _currentProject!.isSaved;
+      _currentProject = _currentProject!.copyWith(isSaved: !currentSaved);
+    }
+    notifyListeners();
+
+    try {
+      final newSavedState = !currentSaved;
+      await ProjectService.toggleSaveProject(projectId, newSavedState);
+      if (newSavedState) {
+        ProjectModel? p;
+        if (idx != -1) p = _projects[idx];
+        p ??= _currentProject;
+        if (p != null && !_savedProjects.any((item) => item.projectId == projectId)) {
+          _savedProjects.insert(0, p.copyWith(isSaved: true));
+        }
+      } else {
+        _savedProjects.removeWhere((item) => item.projectId == projectId);
+      }
+      notifyListeners();
+      return true;
+    } catch (e) {
+      if (idx != -1) {
+        _projects[idx] = _projects[idx].copyWith(isSaved: currentSaved);
+      }
+      if (_currentProject?.projectId == projectId) {
+        _currentProject = _currentProject!.copyWith(isSaved: currentSaved);
+      }
+      notifyListeners();
+      return false;
+    }
+  }
 
   Future<void> fetchProjects({
     String? keyword,

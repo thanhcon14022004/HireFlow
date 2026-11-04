@@ -231,6 +231,21 @@ class ProjectService {
     final items = res as List<dynamic>? ?? [];
     return items.map((p) => ProjectModel.fromJson(p)).toList();
   }
+  static Future<bool> toggleSaveProject(int projectId, bool save) async {
+    if (save) {
+      await ApiService.post(ApiConstants.saveProject(projectId));
+      return true;
+    } else {
+      await ApiService.delete(ApiConstants.saveProject(projectId));
+      return false;
+    }
+  }
+
+  static Future<List<ProjectModel>> getSavedProjects() async {
+    final res = await ApiService.get(ApiConstants.savedProjects);
+    final items = res['items'] as List<dynamic>? ?? [];
+    return items.map((p) => ProjectModel.fromJson(p)).toList();
+  }
 }
 
 class ApplicationService {

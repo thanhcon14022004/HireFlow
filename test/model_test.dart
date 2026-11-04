@@ -55,6 +55,29 @@ void main() {
       expect(project.isContactUnlocked, false);
     });
 
+    test('ProjectModel should parse isSaved correctly and support copyWith', () {
+      final json = {
+        'projectId': 102,
+        'employerId': 5,
+        'employerName': 'Công ty TechNova',
+        'title': 'Dự án Mobile App',
+        'description': 'Mô tả dự án',
+        'currencyCode': 'VND',
+        'status': 'Open',
+        'createdAt': '2026-10-30T00:00:00Z',
+        'skills': ['Flutter'],
+        'applicantCount': 1,
+        'isSaved': true,
+      };
+
+      final project = ProjectModel.fromJson(json);
+      expect(project.isSaved, true);
+
+      final unsaved = project.copyWith(isSaved: false);
+      expect(unsaved.isSaved, false);
+      expect(unsaved.projectId, 102);
+    });
+
     test('CurrencyFormatter should format VND and budget ranges', () {
       expect(CurrencyFormatter.formatBudget(null, null), 'Thỏa thuận');
       expect(CurrencyFormatter.formatBudget(10000000, 10000000).contains('10.000.000'), true);

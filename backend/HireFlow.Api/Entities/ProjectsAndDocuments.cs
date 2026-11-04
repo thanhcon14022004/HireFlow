@@ -47,3 +47,13 @@ public class FreelancerDocument
     public ICollection<Application> Applications { get; set; } = new List<Application>();
 }
 
+public class SavedProject
+{
+    public int SavedProjectId { get; set; }
+    public int FreelancerId { get; set; }
+    public int ProjectId { get; set; }
+    public DateTime SavedAt { get; set; } = DateTime.UtcNow;
+
+    public User Freelancer { get; set; } = null!;
+    public Project Project { get; set; } = null!;
+}

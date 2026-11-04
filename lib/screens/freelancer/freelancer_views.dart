@@ -443,6 +443,7 @@ class _JobSearchTabState extends State<JobSearchTab> {
   String? _selectedSkill;
   String? _selectedExp;
   double? _minBudget;
+  bool _onlySaved = false;
 
   final List<String> _popularSkills = [
     'Tất cả',
@@ -742,7 +743,38 @@ class _JobSearchTabState extends State<JobSearchTab> {
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
-                  children: _popularSkills.map((s) {
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: FilterChip(
+                        avatar: Icon(
+                          _onlySaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                          size: 15,
+                          color: _onlySaved ? Colors.white : AppColors.primary,
+                        ),
+                        label: Text(
+                          'Đã lưu ()',
+                        ),
+                        selected: _onlySaved,
+                        onSelected: (val) {
+                          setState(() => _onlySaved = val);
+                        },
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
+                        visualDensity: VisualDensity.compact,
+                        labelStyle: TextStyle(
+                          fontSize: 12,
+                          fontWeight: _onlySaved ? FontWeight.w700 : FontWeight.w500,
+                          color: _onlySaved ? Colors.white : AppColors.primary,
+                        ),
+                        selectedColor: AppColors.primary,
+                        backgroundColor: AppColors.primaryLight,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          side: BorderSide(color: _onlySaved ? AppColors.primary : const Color(0xFFE5E7EB)),
+                        ),
+                      ),
+                    ),
+                    ..._popularSkills.map((s) {
                     final isAll = s == 'Tất cả';
                     final isSelected = isAll ? (_selectedSkill == null || _selectedSkill!.isEmpty) : (_selectedSkill == s);
                     return Padding(
@@ -769,7 +801,8 @@ class _JobSearchTabState extends State<JobSearchTab> {
                         ),
                       ),
                     );
-                  }).toList(),
+                  }),
+                  ],
                 ),
               ),
             ],
@@ -899,8 +932,21 @@ class _JobSearchTabState extends State<JobSearchTab> {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 6),
+const SizedBox(width: 6),
                   StatusBadge(status: p.hasApplied ? (p.myApplicationStatus ?? 'Pending') : p.status, isSmall: true),
+                  const SizedBox(width: 6),
+                  InkWell(
+                    onTap: () => context.read<ProjectProvider>().toggleSaveProject(p.projectId),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Icon(
+                        p.isSaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                        size: 20,
+                        color: p.isSaved ? AppColors.primary : const Color(0xFF94A3B8),
+                      ),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 10),
@@ -1170,8 +1216,27 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text('Chi tiết công việc', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+title: const Text('Chi tiết công việc', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         actions: [
+          IconButton(
+            icon: Icon(
+              project.isSaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+              color: project.isSaved ? AppColors.primary : AppColors.textSecondary,
+              size: 22,
+            ),
+            tooltip: project.isSaved ? 'Bỏ lưu tin' : 'Lưu tin',
+            onPressed: () async {
+              final scaffoldMessenger = ScaffoldMessenger.of(context);
+              await context.read<ProjectProvider>().toggleSaveProject(project.projectId);
+              if (!mounted) return;
+              scaffoldMessenger.showSnackBar(
+                SnackBar(
+                  content: Text(project.isSaved ? 'Đã bỏ lưu tin tuyển dụng' : 'Đã lưu tin tuyển dụng vào danh sách quan tâm!'),
+                  duration: const Duration(seconds: 1),
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.share_outlined, size: 20, color: AppColors.textPrimary),
             tooltip: 'Chia sẻ tin',

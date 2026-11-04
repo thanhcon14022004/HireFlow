@@ -29,6 +29,7 @@ public class HireFlowDbContext : DbContext
     public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
     public DbSet<Conversation> Conversations => Set<Conversation>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+    public DbSet<SavedProject> SavedProjects => Set<SavedProject>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -275,6 +276,21 @@ public class HireFlowDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(m => m.SenderId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // SavedProject
+        modelBuilder.Entity<SavedProject>(entity =>
+        {
+            entity.HasKey(sp => sp.SavedProjectId);
+            entity.HasIndex(sp => new { sp.FreelancerId, sp.ProjectId }).IsUnique();
+            entity.HasOne(sp => sp.Freelancer)
+                .WithMany()
+                .HasForeignKey(sp => sp.FreelancerId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(sp => sp.Project)
+                .WithMany()
+                .HasForeignKey(sp => sp.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

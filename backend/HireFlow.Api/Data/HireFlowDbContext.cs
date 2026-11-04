@@ -27,6 +27,8 @@ public class HireFlowDbContext : DbContext
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
     public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
+    public DbSet<Conversation> Conversations => Set<Conversation>();
+    public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -240,6 +242,39 @@ public class HireFlowDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(n => n.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Conversation
+        modelBuilder.Entity<Conversation>(entity =>
+        {
+            entity.HasKey(c => c.ConversationId);
+            entity.HasOne(c => c.Project)
+                .WithMany()
+                .HasForeignKey(c => c.ProjectId)
+                .OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(c => c.Freelancer)
+                .WithMany()
+                .HasForeignKey(c => c.FreelancerId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(c => c.Employer)
+                .WithMany()
+                .HasForeignKey(c => c.EmployerId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ChatMessage
+        modelBuilder.Entity<ChatMessage>(entity =>
+        {
+            entity.HasKey(m => m.MessageId);
+            entity.Property(m => m.Content).IsRequired().HasMaxLength(2000);
+            entity.HasOne(m => m.Conversation)
+                .WithMany(c => c.Messages)
+                .HasForeignKey(m => m.ConversationId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(m => m.Sender)
+                .WithMany()
+                .HasForeignKey(m => m.SenderId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

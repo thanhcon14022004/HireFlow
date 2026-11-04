@@ -8,10 +8,13 @@ import '../../models/document_credit_and_admin_models.dart';
 import '../../models/project_and_application_models.dart';
 import '../../providers/app_providers.dart';
 import '../../services/notification_service.dart';
+import '../../providers/chat_provider.dart';
 import '../../widgets/common_widgets.dart';
 import '../common/cv_document_viewer_screen.dart';
 import '../common/google_drive_picker_modal.dart';
 import '../common/wallet_and_dialogs.dart';
+import '../common/chat_screen.dart';
+import '../common/conversations_list_screen.dart';
 
 class FreelancerHomeScreen extends StatefulWidget {
   const FreelancerHomeScreen({super.key});
@@ -34,6 +37,7 @@ class _FreelancerHomeScreenState extends State<FreelancerHomeScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ChatProvider>().fetchUnreadCount();
       final notif = context.read<NotificationProvider>();
       notif.startPolling();
       notif.onNewNotificationReceived = (newNotif) {
@@ -305,6 +309,43 @@ class _FreelancerHomeScreenState extends State<FreelancerHomeScreen> {
           ],
         ),
         actions: [
+          Consumer<ChatProvider>(
+            builder: (context, chat, _) {
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.chat_outlined, size: 22, color: AppColors.textPrimary),
+                    tooltip: 'Tin nhắn & Trao đổi',
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ConversationsListScreen()),
+                      );
+                    },
+                  ),
+                  if (chat.totalUnreadCount > 0)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: AppColors.error,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                        child: Text(
+                          chat.totalUnreadCount > 9 ? '9+' : '${chat.totalUnreadCount}',
+                          style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
           Consumer<NotificationProvider>(
             builder: (context, notif, _) {
               return Stack(
@@ -1502,6 +1543,40 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                                   'Ghi chú: Nhà tuyển dụng đã nhận được CV của bạn. Bạn có thể chủ động liên hệ trực tiếp qua Email hoặc Số điện thoại trên.',
                                   style: TextStyle(fontSize: 11.5, color: Color(0xFF065F46), height: 1.35),
                                 ),
+                                const SizedBox(height: 12),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () async {
+                                      final chatProvider = context.read<ChatProvider>();
+                                      final conv = await chatProvider.startConversation(
+                                        projectId: project.projectId,
+                                        employerId: project.employerId,
+                                      );
+                                      if (conv != null && context.mounted) {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) => ChatScreen(
+                                              conversationId: conv.conversationId,
+                                              otherPartyName: conv.otherPartyName,
+                                              otherPartyRole: conv.otherPartyRole,
+                                              projectTitle: conv.projectTitle,
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    icon: const Icon(Icons.chat_bubble_rounded, size: 16),
+                                    label: const Text('Nhắn tin trao đổi với NTD', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.primary,
+                                      foregroundColor: Colors.white,
+                                      elevation: 0,
+                                      padding: const EdgeInsets.symmetric(vertical: 11),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    ),
+                                  ),
+                                ),
                               ],
                             )
                           : Column(
@@ -1574,25 +1649,68 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: project.hasApplied
-                        ? Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEFF6FF),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: const Color(0xFFBFDBFE)),
-                            ),
-                            alignment: Alignment.center,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.hourglass_top_rounded, color: Color(0xFF2563EB), size: 16),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Đã nộp hồ sơ (${project.myApplicationStatus == "Pending" ? "Chờ xem xét" : (project.myApplicationStatus ?? "Chờ xem xét")})',
-                                  style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF2563EB), fontSize: 13.5),
+                        ? Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 11),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEFF6FF),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: const Color(0xFFBFDBFE)),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.hourglass_top_rounded, color: Color(0xFF2563EB), size: 15),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        'Đã nộp (${project.myApplicationStatus == "Pending" ? "Chờ xem xét" : (project.myApplicationStatus ?? "Chờ xem xét")})',
+                                        style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF2563EB), fontSize: 12.5),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(width: 8),
+                              InkWell(
+                                onTap: () async {
+                                  final chatProvider = context.read<ChatProvider>();
+                                  final conv = await chatProvider.startConversation(
+                                    projectId: project.projectId,
+                                    employerId: project.employerId,
+                                  );
+                                  if (conv != null && context.mounted) {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => ChatScreen(
+                                          conversationId: conv.conversationId,
+                                          otherPartyName: conv.otherPartyName,
+                                          otherPartyRole: conv.otherPartyRole,
+                                          projectTitle: conv.projectTitle,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                                borderRadius: BorderRadius.circular(10),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Row(
+                                    children: [
+                                      Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 16),
+                                      SizedBox(width: 4),
+                                      Text('Chat', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           )
                         : ElevatedButton.icon(
                             onPressed: project.canApply ? _onApply : null,

@@ -83,7 +83,8 @@ class ProjectModel {
   bool get isClosed => status == 'Closed';
   bool get isExpired => deadline != null && deadline!.isBefore(DateTime.now());
   bool get isRejected => myApplicationStatus == 'Rejected';
-  bool get canApply => isOpen && !isExpired && (!hasApplied || isRejected);
+  bool get isWithdrawn => myApplicationStatus == 'Withdrawn';
+  bool get canApply => isOpen && !isExpired && (!hasApplied || isRejected || isWithdrawn);
 
   ProjectModel copyWith({
     int? projectId,
@@ -196,6 +197,51 @@ class ApplicationModel {
               ?.map((h) => ApplicationStatusHistoryModel.fromJson(h))
               .toList() ??
           [],
+    );
+  }
+
+  bool get isPending => status == 'Pending';
+  bool get isReviewing => status == 'Reviewing';
+  bool get isAccepted => status == 'Accepted';
+  bool get isRejected => status == 'Rejected';
+  bool get isWithdrawn => status == 'Withdrawn';
+  bool get canWithdraw => status == 'Pending' || status == 'Reviewing';
+
+  ApplicationModel copyWith({
+    int? applicationId,
+    int? projectId,
+    String? projectTitle,
+    int? freelancerId,
+    String? freelancerName,
+    String? freelancerHeadline,
+    String? freelancerBio,
+    int? freelancerExperienceYears,
+    List<String>? freelancerSkills,
+    int? documentId,
+    String? originalFileName,
+    String? coverLetter,
+    String? status,
+    DateTime? appliedAt,
+    DateTime? updatedAt,
+    List<ApplicationStatusHistoryModel>? statusHistories,
+  }) {
+    return ApplicationModel(
+      applicationId: applicationId ?? this.applicationId,
+      projectId: projectId ?? this.projectId,
+      projectTitle: projectTitle ?? this.projectTitle,
+      freelancerId: freelancerId ?? this.freelancerId,
+      freelancerName: freelancerName ?? this.freelancerName,
+      freelancerHeadline: freelancerHeadline ?? this.freelancerHeadline,
+      freelancerBio: freelancerBio ?? this.freelancerBio,
+      freelancerExperienceYears: freelancerExperienceYears ?? this.freelancerExperienceYears,
+      freelancerSkills: freelancerSkills ?? this.freelancerSkills,
+      documentId: documentId ?? this.documentId,
+      originalFileName: originalFileName ?? this.originalFileName,
+      coverLetter: coverLetter ?? this.coverLetter,
+      status: status ?? this.status,
+      appliedAt: appliedAt ?? this.appliedAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      statusHistories: statusHistories ?? this.statusHistories,
     );
   }
 }

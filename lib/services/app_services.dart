@@ -282,6 +282,15 @@ class ApplicationService {
       'status': status,
     });
   }
+
+  static Future<Map<String, dynamic>> withdrawApplication(int applicationId, {String? reason}) async {
+    final body = <String, dynamic>{};
+    if (reason != null && reason.isNotEmpty) {
+      body['reason'] = reason;
+    }
+    final res = await ApiService.post(ApiConstants.withdrawApplication(applicationId), body: body);
+    return Map<String, dynamic>.from(res);
+  }
 }
 
 class DocumentService {

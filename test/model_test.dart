@@ -83,6 +83,30 @@ void main() {
       expect(CurrencyFormatter.formatBudget(10000000, 10000000).contains('10.000.000'), true);
       expect(CurrencyFormatter.formatBudget(5000000, 10000000).contains('5.000.000'), true);
     });
+
+    test('ApplicationModel should correctly identify withdrawal capability and status', () {
+      final jsonPending = {
+        'applicationId': 201,
+        'projectId': 10,
+        'projectTitle': 'Flutter Project',
+        'freelancerId': 1,
+        'freelancerName': 'Nguyen Van An',
+        'documentId': 5,
+        'originalFileName': 'cv.pdf',
+        'status': 'Pending',
+        'appliedAt': '2026-11-01T00:00:00Z',
+        'updatedAt': '2026-11-01T00:00:00Z',
+      };
+
+      final appPending = ApplicationModel.fromJson(jsonPending);
+      expect(appPending.isPending, true);
+      expect(appPending.canWithdraw, true);
+      expect(appPending.isWithdrawn, false);
+
+      final appWithdrawn = appPending.copyWith(status: 'Withdrawn');
+      expect(appWithdrawn.isWithdrawn, true);
+      expect(appWithdrawn.canWithdraw, false);
+    });
   });
 }
 

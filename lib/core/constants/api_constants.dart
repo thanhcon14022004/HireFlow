@@ -47,6 +47,7 @@ class ApiConstants {
   static String applicationDetail(int id) => '/api/applications/$id';
   static String downloadApplicationCv(int id) => '/api/applications/$id/cv';
   static String updateApplicationStatus(int id) => '/api/applications/$id/status';
+  static String withdrawApplication(int id) => '/api/applications/$id/withdraw';
 
   // Credit endpoints
   static const String creditBalance = '/api/credits/balance';

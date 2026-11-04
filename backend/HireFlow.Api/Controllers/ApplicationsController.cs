@@ -70,7 +70,7 @@ public class ApplicationsController : ControllerBase
 
         // 3. Check duplicate application
         var existingApp = await _db.Applications.FirstOrDefaultAsync(a => a.ProjectId == projectId && a.FreelancerId == userId);
-        if (existingApp != null && existingApp.Status != "Rejected")
+        if (existingApp != null && existingApp.Status != "Rejected" && existingApp.Status != "Withdrawn")
         {
             var statusVn = existingApp.Status == "Pending" ? "Chờ xem xét"
                          : existingApp.Status == "Reviewing" ? "Đang đánh giá"
@@ -93,7 +93,7 @@ public class ApplicationsController : ControllerBase
         try
         {
             Application application;
-            var isReapplying = existingApp != null && existingApp.Status == "Rejected";
+            var isReapplying = existingApp != null && (existingApp.Status == "Rejected" || existingApp.Status == "Withdrawn");
 
             if (isReapplying)
             {
@@ -107,7 +107,7 @@ public class ApplicationsController : ControllerBase
                 _db.ApplicationStatusHistories.Add(new ApplicationStatusHistory
                 {
                     ApplicationId = application.ApplicationId,
-                    OldStatus = "Rejected",
+                    OldStatus = existingApp!.Status,
                     NewStatus = "Pending",
                     ChangedByUserId = userId,
                     ChangedAt = DateTime.UtcNow
@@ -466,6 +466,122 @@ public class ApplicationsController : ControllerBase
         TriggerEmulatorNotification(notifTitle, notifMessage, $"app_{app.ApplicationId}");
 
         return Ok(new { message = $"Đã cập nhật trạng thái hồ sơ thành '{normalizedStatus}'.", status = normalizedStatus });
+    }
+
+
+    [HttpPost("api/applications/{applicationId}/withdraw")]
+    [Authorize(Roles = "Freelancer")]
+    public async Task<IActionResult> WithdrawApplication(int applicationId, [FromBody] WithdrawApplicationRequest? request)
+    {
+        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+        var application = await _db.Applications
+            .Include(a => a.Project)
+            .FirstOrDefaultAsync(a => a.ApplicationId == applicationId);
+
+        if (application == null)
+        {
+            throw new AppException("Hồ sơ ứng tuyển không tồn tại.", "APPLICATION_NOT_FOUND", System.Net.HttpStatusCode.NotFound);
+        }
+
+        if (application.FreelancerId != userId)
+        {
+            throw new AppException("Bạn không có quyền rút hồ sơ này.", "FORBIDDEN", System.Net.HttpStatusCode.Forbidden);
+        }
+
+        if (application.Status == "Withdrawn")
+        {
+            throw new AppException("Hồ sơ này đã được rút trước đó.", "ALREADY_WITHDRAWN");
+        }
+
+        if (application.Status == "Accepted")
+        {
+            throw new AppException("Hồ sơ đã được phê duyệt trúng tuyển, không thể rút hồ sơ trực tiếp.", "CANNOT_WITHDRAW_ACCEPTED");
+        }
+
+        if (application.Status == "Rejected")
+        {
+            throw new AppException("Hồ sơ đã bị từ chối trước đó, không thể rút.", "CANNOT_WITHDRAW_REJECTED");
+        }
+
+        var oldStatus = application.Status;
+        var reason = request?.Reason?.Trim();
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            reason = "Ứng viên chủ động rút hồ sơ";
+        }
+
+        using var tx = await _db.Database.BeginTransactionAsync();
+        try
+        {
+            application.Status = "Withdrawn";
+            application.UpdatedAt = DateTime.UtcNow;
+
+            _db.ApplicationStatusHistories.Add(new ApplicationStatusHistory
+            {
+                ApplicationId = application.ApplicationId,
+                OldStatus = oldStatus,
+                NewStatus = "Withdrawn",
+                ChangedByUserId = userId,
+                ChangedAt = DateTime.UtcNow
+            });
+
+            // Credit policy: If application was still 'Pending' (not reviewed yet), refund 1 credit
+            int refundedCredits = 0;
+            if (oldStatus == "Pending")
+            {
+                refundedCredits = 1;
+                var wallet = await _db.CreditWallets.FirstOrDefaultAsync(w => w.UserId == userId);
+                if (wallet != null)
+                {
+                    wallet.Balance += refundedCredits;
+                    wallet.UpdatedAt = DateTime.UtcNow;
+
+                    _db.CreditTransactions.Add(new CreditTransaction
+                    {
+                        UserId = userId,
+                        Amount = refundedCredits,
+                        TransactionType = "Refund",
+                        ReferenceType = "Application",
+                        Description = $"Hoàn {refundedCredits} credit do rút hồ sơ ứng tuyển #{application.ApplicationId} dự án '{application.Project.Title}'",
+                        ReferenceId = application.ApplicationId.ToString(),
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+            }
+
+            // Create notification for Employer
+            _db.UserNotifications.Add(new UserNotification
+            {
+                UserId = application.Project.EmployerId,
+                Title = "Ứng viên đã rút hồ sơ",
+                Message = $"Ứng viên đã rút hồ sơ dự án '{application.Project.Title}'. Lý do: {reason}",
+                Type = "ApplicationWithdrawn",
+                ReferenceId = application.ApplicationId,
+                CreatedAt = DateTime.UtcNow
+            });
+
+            await _db.SaveChangesAsync();
+            await tx.CommitAsync();
+
+            _logger.LogInformation("Freelancer {UserId} withdrew application {AppId}. Refunded: {Refund}", userId, applicationId, refundedCredits);
+
+            return Ok(new
+            {
+                applicationId = application.ApplicationId,
+                status = "Withdrawn",
+                refundedCredits = refundedCredits,
+                message = refundedCredits > 0 
+                    ? $"Đã rút hồ sơ thành công và bạn được hoàn lại {refundedCredits} credit."
+                    : "Đã rút hồ sơ thành công."
+            });
+        }
+        catch (Exception ex)
+        {
+            await tx.RollbackAsync();
+            _logger.LogError(ex, "Error withdrawing application {AppId}", applicationId);
+            throw;
+        }
     }
 
     private static void TriggerEmulatorNotification(string title, string message, string tag = "hireflow_status")

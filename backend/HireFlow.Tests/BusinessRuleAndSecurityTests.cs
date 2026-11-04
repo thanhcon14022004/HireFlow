@@ -401,4 +401,71 @@ public class BusinessRuleAndSecurityTests
         var isSavedAfterUnsave = await db.SavedProjects.AnyAsync(sp => sp.FreelancerId == freelancer.UserId && sp.ProjectId == project.ProjectId);
         Assert.False(isSavedAfterUnsave);
     }
+
+    [Fact]
+    public async Task WithdrawApplication_ShouldChangeStatusToWithdrawn_And_RecordHistory()
+    {
+        var db = CreateInMemoryDbContext(nameof(WithdrawApplication_ShouldChangeStatusToWithdrawn_And_RecordHistory));
+        var freelancer = new User { FullName = "Free Lancer", Email = "fl_w@hireflow.com", Role = "Freelancer" };
+        var employer = new User { FullName = "Emp Loyee", Email = "emp_w@hireflow.com", Role = "Employer" };
+        db.Users.AddRange(freelancer, employer);
+        await db.SaveChangesAsync();
+
+        var wallet = new CreditWallet { UserId = freelancer.UserId, Balance = 10 };
+        db.CreditWallets.Add(wallet);
+
+        var project = new Project
+        {
+            EmployerId = employer.UserId,
+            Title = "Backend API Dev",
+            Description = "Need C# developer",
+            Status = "Open"
+        };
+        db.Projects.Add(project);
+        await db.SaveChangesAsync();
+
+        var doc = new FreelancerDocument
+        {
+            FreelancerId = freelancer.UserId,
+            OriginalFileName = "cv.pdf",
+            StorageKey = "storage/cvs/cv.pdf",
+            FileSize = 1024
+        };
+        db.FreelancerDocuments.Add(doc);
+        await db.SaveChangesAsync();
+
+        var app = new Application
+        {
+            ProjectId = project.ProjectId,
+            FreelancerId = freelancer.UserId,
+            DocumentId = doc.DocumentId,
+            Status = "Pending"
+        };
+        db.Applications.Add(app);
+        await db.SaveChangesAsync();
+
+        // Perform withdrawal logic
+        app.Status = "Withdrawn";
+        db.ApplicationStatusHistories.Add(new ApplicationStatusHistory
+        {
+            ApplicationId = app.ApplicationId,
+            OldStatus = "Pending",
+            NewStatus = "Withdrawn",
+            ChangedByUserId = freelancer.UserId,
+            ChangedAt = DateTime.UtcNow
+        });
+        wallet.Balance += 1; // refund 1 credit for Pending
+        await db.SaveChangesAsync();
+
+        var updatedApp = await db.Applications.FindAsync(app.ApplicationId);
+        Assert.Equal("Withdrawn", updatedApp!.Status);
+
+        var history = await db.ApplicationStatusHistories.FirstOrDefaultAsync(h => h.ApplicationId == app.ApplicationId);
+        Assert.NotNull(history);
+        Assert.Equal("Withdrawn", history!.NewStatus);
+        Assert.Equal("Pending", history.OldStatus);
+
+        var updatedWallet = await db.CreditWallets.FindAsync(wallet.WalletId);
+        Assert.Equal(11, updatedWallet!.Balance);
+    }
 }

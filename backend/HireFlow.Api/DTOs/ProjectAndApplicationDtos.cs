@@ -122,3 +122,10 @@ public class ApplicationStatusHistoryDto
     public DateTime ChangedAt { get; set; }
 }
 
+
+
+public class WithdrawApplicationRequest
+{
+    [MaxLength(500)]
+    public string? Reason { get; set; }
+}

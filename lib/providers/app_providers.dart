@@ -500,6 +500,26 @@ class ApplicationProvider extends ChangeNotifier {
       return false;
     }
   }
+
+  Future<Map<String, dynamic>> withdrawApplication(int applicationId, {String? reason}) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      final res = await ApplicationService.withdrawApplication(applicationId, reason: reason);
+      final idx = _myApplications.indexWhere((a) => a.applicationId == applicationId);
+      if (idx != -1) {
+        _myApplications[idx] = _myApplications[idx].copyWith(status: 'Withdrawn');
+      }
+      return res;
+    } catch (e) {
+      _errorMessage = e.toString();
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 }
 
 class DocumentProvider extends ChangeNotifier {

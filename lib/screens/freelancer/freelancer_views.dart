@@ -2236,6 +2236,139 @@ class _MyApplicationsTabState extends State<MyApplicationsTab> {
     });
   }
 
+  void _showWithdrawDialog(ApplicationModel app) {
+    String selectedReason = 'Đã tìm được công việc khác';
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            final isPending = app.status == 'Pending';
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: const Color(0xFFFEF2F2), borderRadius: BorderRadius.circular(8)),
+                    child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626), size: 22),
+                  ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text('Rút hồ sơ ứng tuyển', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Bạn có chắc chắn muốn rút hồ sơ ứng tuyển vào dự án "${app.projectTitle}"?',
+                      style: const TextStyle(fontSize: 13.5, color: Color(0xFF334155)),
+                    ),
+                    const SizedBox(height: 10),
+                    if (isPending)
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFECFDF5),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFA7F3D0)),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.check_circle_outline_rounded, color: Color(0xFF059669), size: 18),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Hồ sơ đang ở trạng thái Chờ xem xét, bạn sẽ được hoàn lại 1 credit khi rút hồ sơ.',
+                                style: TextStyle(fontSize: 12, color: Color(0xFF065F46), fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    const SizedBox(height: 14),
+                    const Text('Lý do rút hồ sơ:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    ...[
+                      'Đã tìm được công việc khác',
+                      'Bận đột xuất / Trùng lịch làm việc',
+                      'Mức lương hoặc yêu cầu không còn phù hợp',
+                      'Lý do cá nhân khác',
+                    ].map((r) {
+                      final isSelected = selectedReason == r;
+                      return InkWell(
+                        onTap: () => setDialogState(() => selectedReason = r),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            children: [
+                              Icon(
+                                isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+                                size: 18,
+                                color: isSelected ? AppColors.primary : const Color(0xFF94A3B8),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(r, style: TextStyle(fontSize: 13, fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Hủy bỏ', style: TextStyle(color: Color(0xFF64748B))),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFDC2626),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () async {
+                    final scaffold = ScaffoldMessenger.of(context);
+                    final credit = context.read<CreditProvider>();
+                    final appProv = context.read<ApplicationProvider>();
+                    Navigator.pop(ctx);
+                    try {
+                      final res = await appProv.withdrawApplication(
+                        app.applicationId,
+                        reason: selectedReason,
+                      );
+                      credit.fetchBalance();
+                      scaffold.showSnackBar(
+                        SnackBar(
+                          content: Text(res['message']?.toString() ?? 'Đã rút hồ sơ thành công.'),
+                          backgroundColor: const Color(0xFF0F172A),
+                        ),
+                      );
+                    } catch (e) {
+                      scaffold.showSnackBar(
+                        SnackBar(content: Text('Lỗi: $e'), backgroundColor: AppColors.error),
+                      );
+                    }
+                  },
+                  child: const Text('Xác nhận rút'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _showStatusTimeline(ApplicationModel app) {
     showModalBottomSheet(
       context: context,
@@ -2331,6 +2464,28 @@ class _MyApplicationsTabState extends State<MyApplicationsTab> {
     bool isRejected = false;
 
     final lower = status.toLowerCase();
+    if (lower == 'withdrawn') {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.info_outline_rounded, size: 15, color: Color(0xFF64748B)),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Hồ sơ này đã được bạn chủ động rút.',
+                style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     if (lower == 'reviewing') {
       currentStep = 2;
     } else if (lower == 'shortlisted') {
@@ -2438,6 +2593,7 @@ class _MyApplicationsTabState extends State<MyApplicationsTab> {
                 _buildFilterChip('Mời phỏng vấn', 'Shortlisted'),
                 _buildFilterChip('Trúng tuyển', 'Accepted'),
                 _buildFilterChip('Từ chối', 'Rejected'),
+                _buildFilterChip('Đã rút', 'Withdrawn'),
               ],
             ),
           ),
@@ -2552,6 +2708,32 @@ class _MyApplicationsTabState extends State<MyApplicationsTab> {
                                       child: const Text('Xem tin', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary)),
                                     ),
                                   ),
+                                  if (app.canWithdraw) ...[
+                                    const SizedBox(width: 6),
+                                    InkWell(
+                                      onTap: () => _showWithdrawDialog(app),
+                                      borderRadius: BorderRadius.circular(6),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFFEF2F2),
+                                          borderRadius: BorderRadius.circular(6),
+                                          border: Border.all(color: const Color(0xFFFECACA)),
+                                        ),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.undo_rounded, size: 13, color: Color(0xFFDC2626)),
+                                            SizedBox(width: 4),
+                                            Text(
+                                              'Rút hồ sơ',
+                                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFDC2626)),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                   if (app.status == 'Rejected') ...[
                                     const SizedBox(width: 6),
                                     InkWell(

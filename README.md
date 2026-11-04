@@ -6,6 +6,14 @@ Hệ thống được phát triển tuân thủ nghiêm ngặt theo tài liệu 
 
 ---
 
+## 📌 Tài Liệu Kiểm Tra Giai Đoạn 1 (Slot 6 / B12 Check)
+
+- 📊 **Sơ đồ Cơ Sở Dữ Liệu (ERD):** [docs/DATABASE_ERD.md](docs/DATABASE_ERD.md) *(Xem sơ đồ thực thể quan hệ đồ họa trực quan ngay trên GitHub)*
+- 🎨 **Thiết Kế Giao Diện Mockup & Figma:** [docs/UI_MOCKUP_FIGMA.md](docs/UI_MOCKUP_FIGMA.md) *(Sơ đồ luồng màn hình, đặc tả UI & Prototype link)*
+- 💾 **Kịch bản Cơ Sở Dữ Liệu SQL Server:** [`HireFlow_Database.sql`](HireFlow_Database.sql)
+
+---
+
 ## 1. Kiến Trúc Kỹ Thuật (Architecture)
 
 - **Frontend:** Flutter (Dart 3.13 / Flutter 3.47), Material 3, Quản lý trạng thái đa tầng bằng Provider, giao diện tiếng Việt thân thiện, thiết kế đáp ứng (Responsive).

@@ -61,4 +61,5 @@ backend/HireFlow.Api/storage/cvs/*
 
 # Root screenshots & temp test captures
 /*.png
+/*.xml
 

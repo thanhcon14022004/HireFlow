@@ -41,6 +41,29 @@ class AppColors {
   static const Color textSecondary = Color(0xFF4B5563); // Gray 600
   static const Color textMuted = Color(0xFF9CA3AF); // Gray 400
 
+  // Extra tokens (previously hardcoded inside widgets)
+  static const Color slate50 = Color(0xFFF8FAFC); // same as surfaceSecondary
+  static const Color slate400 = Color(0xFF94A3B8);
+  static const Color slate600 = Color(0xFF475569);
+  static const Color gray100 = Color(0xFFF3F4F6);
+  static const Color gray500 = Color(0xFF6B7280);
+  static const Color blue50 = Color(0xFFEFF6FF);
+  static const Color blue500 = Color(0xFF3B82F6);
+  static const Color blue600 = Color(0xFF2563EB);
+  static const Color amber50 = Color(0xFFFFFBEB);
+  static const Color red600 = Color(0xFFDC2626);
+  static const Color violet50 = Color(0xFFF5F3FF); // soft tint used in empty states
+
+  // Credit badge
+  static const Color creditBadgeStart = Color(0xFFFEF3C7);
+  static const Color creditBadgeEnd = Color(0xFFFDE68A);
+  static const Color creditBadgeText = Color(0xFF92400E);
+  static const Color creditBadgeSubText = Color(0xFFB45309);
+
+  // Skeleton / shimmer
+  static const Color shimmerBase = Color(0xFFE5E7EB);
+  static const Color shimmerHighlight = Color(0xFFF9FAFB);
+
   // Gradients
   static const LinearGradient primaryGradient = LinearGradient(
     colors: [Color(0xFF00B14F), Color(0xFF009643)],
@@ -59,4 +82,79 @@ class AppColors {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
+}
+
+/// Colour set used by [StatusBadge] (background, foreground, dot) plus a
+/// Vietnamese label. Keeping it here means a status colour only has to be
+/// changed in one place.
+class StatusStyle {
+  final Color bg;
+  final Color fg;
+  final Color dot;
+  final String? label;
+
+  const StatusStyle({
+    required this.bg,
+    required this.fg,
+    required this.dot,
+    this.label,
+  });
+
+  static const StatusStyle _success = StatusStyle(
+    bg: AppColors.primaryLight,
+    fg: AppColors.primary,
+    dot: AppColors.primary,
+  );
+  static const StatusStyle _neutral = StatusStyle(
+    bg: AppColors.gray100,
+    fg: AppColors.gray500,
+    dot: AppColors.textMuted,
+  );
+  static const StatusStyle _warning = StatusStyle(
+    bg: AppColors.amber50,
+    fg: AppColors.accentDark,
+    dot: AppColors.warning,
+  );
+  static const StatusStyle _danger = StatusStyle(
+    bg: AppColors.errorLight,
+    fg: AppColors.red600,
+    dot: AppColors.error,
+  );
+  static const StatusStyle _info = StatusStyle(
+    bg: AppColors.blue50,
+    fg: AppColors.blue600,
+    dot: AppColors.blue500,
+  );
+
+  StatusStyle _withLabel(String l) =>
+      StatusStyle(bg: bg, fg: fg, dot: dot, label: l);
+
+  /// Returns the style for a backend status string (case-insensitive).
+  /// Unknown statuses fall back to a neutral grey with no label override.
+  static StatusStyle of(String status) {
+    switch (status.toLowerCase()) {
+      case 'open':
+        return _success._withLabel('Đang nhận hồ sơ');
+      case 'closed':
+        return _neutral._withLabel('Đã đóng');
+      case 'hidden':
+        return _warning._withLabel('Tạm ẩn');
+      case 'removed':
+        return _danger._withLabel('Đã gỡ bỏ');
+      case 'pending':
+        return _info._withLabel('Chờ xem xét');
+      case 'reviewing':
+        return _warning._withLabel('Đang đánh giá');
+      case 'shortlisted':
+        return _info._withLabel('Chọn phỏng vấn');
+      case 'accepted':
+        return _success._withLabel('Trúng tuyển');
+      case 'rejected':
+        return _danger._withLabel('Từ chối');
+      case 'resolved':
+        return _success._withLabel('Đã giải quyết');
+      default:
+        return _neutral;
+    }
+  }
 }

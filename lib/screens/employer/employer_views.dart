@@ -6,6 +6,7 @@ import '../../models/project_and_application_models.dart';
 import '../../providers/app_providers.dart';
 import '../../services/app_services.dart';
 import '../../widgets/common_widgets.dart';
+import '../../widgets/skeleton_widgets.dart';
 import '../common/cv_document_viewer_screen.dart';
 import '../common/wallet_and_dialogs.dart';
 
@@ -31,7 +32,7 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
     final credit = context.watch<CreditProvider>();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6F8),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -101,7 +102,7 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: Colors.white,
-          border: Border(top: BorderSide(color: Color(0xFFE5E7EB), width: 1)),
+          border: Border(top: BorderSide(color: AppColors.border, width: 1)),
         ),
         child: NavigationBar(
           backgroundColor: Colors.white,
@@ -159,7 +160,7 @@ class _EmployerProjectsTabState extends State<EmployerProjectsTab> {
         title: const Text('Đóng nhận hồ sơ tin này?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         content: const Text(
           'Tin tuyển dụng sau khi đóng sẽ ngừng tiếp nhận ứng viên mới trên bảng tin việc làm. Các ứng viên đã nộp vẫn được lưu giữ an toàn để bạn tiếp tục đánh giá.',
-          style: TextStyle(fontSize: 13, height: 1.45, color: Color(0xFF475569)),
+          style: TextStyle(fontSize: 13, height: 1.45, color: AppColors.slate600),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hủy bỏ')),
@@ -233,7 +234,7 @@ class _EmployerProjectsTabState extends State<EmployerProjectsTab> {
                     title: 'Ứng viên',
                     value: '$totalApplicants',
                     icon: Icons.people_outline_rounded,
-                    color: const Color(0xFFD97706),
+                    color: AppColors.accentDark,
                   ),
                 ),
               ],
@@ -254,7 +255,7 @@ class _EmployerProjectsTabState extends State<EmployerProjectsTab> {
             const SizedBox(height: 12),
 
             if (projectProvider.isLoading && projects.isEmpty)
-              const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
+              const SkeletonList(type: SkeletonType.jobCard, itemCount: 3, shrinkWrap: true)
             else if (filtered.isEmpty)
               const EmptyStateWidget(
                 icon: Icons.post_add_rounded,
@@ -284,7 +285,7 @@ class _EmployerProjectsTabState extends State<EmployerProjectsTab> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: AppColors.border),
         boxShadow: const [
           BoxShadow(color: Color(0x04000000), blurRadius: 4, offset: Offset(0, 1)),
         ],
@@ -322,13 +323,13 @@ class _EmployerProjectsTabState extends State<EmployerProjectsTab> {
         labelStyle: TextStyle(
           fontSize: 11.5,
           fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-          color: isSelected ? AppColors.primary : const Color(0xFF4B5563),
+          color: isSelected ? AppColors.primary : AppColors.textSecondary,
         ),
         selectedColor: AppColors.primaryLight,
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(6),
-          side: BorderSide(color: isSelected ? AppColors.primary : const Color(0xFFE5E7EB)),
+          side: BorderSide(color: isSelected ? AppColors.primary : AppColors.border),
         ),
       ),
     );
@@ -355,7 +356,7 @@ class _EmployerProjectsTabState extends State<EmployerProjectsTab> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
+            border: Border.all(color: AppColors.border, width: 1),
             boxShadow: const [
               BoxShadow(color: Color(0x06000000), blurRadius: 6, offset: Offset(0, 2)),
             ],
@@ -412,7 +413,7 @@ class _EmployerProjectsTabState extends State<EmployerProjectsTab> {
                         ),
                         child: Text(
                           p.experienceLevel!,
-                          style: const TextStyle(fontSize: 11.5, color: Color(0xFF475569), fontWeight: FontWeight.w500),
+                          style: const TextStyle(fontSize: 11.5, color: AppColors.slate600, fontWeight: FontWeight.w500),
                         ),
                       ),
                   ],
@@ -425,7 +426,7 @@ class _EmployerProjectsTabState extends State<EmployerProjectsTab> {
                       return Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
+                          color: AppColors.surfaceSecondary,
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(color: const Color(0xFFE2E8F0)),
                         ),
@@ -435,7 +436,7 @@ class _EmployerProjectsTabState extends State<EmployerProjectsTab> {
                   ),
                 ],
                 const SizedBox(height: 12),
-                const Divider(height: 1, color: Color(0xFFE5E7EB)),
+                const Divider(height: 1, color: AppColors.border),
                 const SizedBox(height: 8),
 
                 // Action row
@@ -559,7 +560,7 @@ class _EmployerProjectDetailScreenState extends State<EmployerProjectDetailScree
         title: const Text('Đóng nhận hồ sơ tin này?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         content: const Text(
           'Tin tuyển dụng sau khi đóng sẽ ngừng tiếp nhận ứng viên mới trên bảng tin việc làm. Các ứng viên đã nộp vẫn được lưu giữ an toàn để bạn tiếp tục đánh giá.',
-          style: TextStyle(fontSize: 13, height: 1.45, color: Color(0xFF475569)),
+          style: TextStyle(fontSize: 13, height: 1.45, color: AppColors.slate600),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hủy bỏ')),
@@ -596,9 +597,9 @@ class _EmployerProjectDetailScreenState extends State<EmployerProjectDetailScree
       builder: (ctx) {
         final statuses = [
           {'key': 'Reviewing', 'name': 'Đang đánh giá hồ sơ', 'color': const Color(0xFF8B5CF6)},
-          {'key': 'Shortlisted', 'name': 'Mời phỏng vấn', 'color': const Color(0xFF2563EB)},
+          {'key': 'Shortlisted', 'name': 'Mời phỏng vấn', 'color': AppColors.blue600},
           {'key': 'Accepted', 'name': 'Chấp nhận trúng tuyển', 'color': const Color(0xFF10B981)},
-          {'key': 'Rejected', 'name': 'Từ chối ứng tuyển', 'color': const Color(0xFFEF4444)},
+          {'key': 'Rejected', 'name': 'Từ chối ứng tuyển', 'color': AppColors.error},
         ];
 
         return Padding(
@@ -684,13 +685,13 @@ class _EmployerProjectDetailScreenState extends State<EmployerProjectDetailScree
         labelStyle: TextStyle(
           fontSize: 11.5,
           fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-          color: isSelected ? AppColors.primary : const Color(0xFF4B5563),
+          color: isSelected ? AppColors.primary : AppColors.textSecondary,
         ),
         selectedColor: AppColors.primaryLight,
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(6),
-          side: BorderSide(color: isSelected ? AppColors.primary : const Color(0xFFE5E7EB)),
+          side: BorderSide(color: isSelected ? AppColors.primary : AppColors.border),
         ),
       ),
     );
@@ -708,7 +709,7 @@ class _EmployerProjectDetailScreenState extends State<EmployerProjectDetailScree
     final p = _project;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6F8),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -794,7 +795,7 @@ class _EmployerProjectDetailScreenState extends State<EmployerProjectDetailScree
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF8FAFC),
+                            color: AppColors.surfaceSecondary,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: const Color(0xFFE2E8F0)),
                           ),
@@ -832,7 +833,7 @@ class _EmployerProjectDetailScreenState extends State<EmployerProjectDetailScree
                                   children: [
                                     const Row(
                                       children: [
-                                        Icon(Icons.military_tech_outlined, size: 13, color: Color(0xFF2563EB)),
+                                        Icon(Icons.military_tech_outlined, size: 13, color: AppColors.blue600),
                                         SizedBox(width: 4),
                                         Text('Cấp bậc', style: TextStyle(fontSize: 10.5, color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
                                       ],
@@ -840,7 +841,7 @@ class _EmployerProjectDetailScreenState extends State<EmployerProjectDetailScree
                                     const SizedBox(height: 3),
                                     Text(
                                       p.experienceLevel ?? 'Tất cả cấp bậc',
-                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF1E293B)),
+                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.secondaryLight),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -857,7 +858,7 @@ class _EmployerProjectDetailScreenState extends State<EmployerProjectDetailScree
                                   children: [
                                     const Row(
                                       children: [
-                                        Icon(Icons.calendar_today_outlined, size: 12, color: Color(0xFFD97706)),
+                                        Icon(Icons.calendar_today_outlined, size: 12, color: AppColors.accentDark),
                                         SizedBox(width: 4),
                                         Text('Hạn nộp', style: TextStyle(fontSize: 10.5, color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
                                       ],
@@ -865,7 +866,7 @@ class _EmployerProjectDetailScreenState extends State<EmployerProjectDetailScree
                                     const SizedBox(height: 3),
                                     Text(
                                       p.deadline != null ? CurrencyFormatter.formatDate(p.deadline!) : 'Không giới hạn',
-                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF1E293B)),
+                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.secondaryLight),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -927,7 +928,7 @@ class _EmployerProjectDetailScreenState extends State<EmployerProjectDetailScree
                           width: double.infinity,
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF8FAFC),
+                            color: AppColors.surfaceSecondary,
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(color: const Color(0xFFE2E8F0)),
                           ),
@@ -944,15 +945,15 @@ class _EmployerProjectDetailScreenState extends State<EmployerProjectDetailScree
                           children: [
                             Text(
                               'Đăng ngày: ${CurrencyFormatter.formatDate(p.createdAt)}',
-                              style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                              style: const TextStyle(fontSize: 11, color: AppColors.slate400),
                             ),
                             if (p.isOpen)
                               TextButton.icon(
                                 onPressed: _onCloseProject,
-                                icon: const Icon(Icons.lock_outline_rounded, size: 15, color: Color(0xFFDC2626)),
+                                icon: const Icon(Icons.lock_outline_rounded, size: 15, color: AppColors.red600),
                                 label: const Text(
                                   'Đóng nhận hồ sơ',
-                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFFDC2626)),
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.red600),
                                 ),
                               ),
                           ],
@@ -1023,7 +1024,7 @@ class _EmployerProjectDetailScreenState extends State<EmployerProjectDetailScree
 
               // Applicants List
               if (appProvider.isLoading && apps.isEmpty)
-                const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
+                const SkeletonList(type: SkeletonType.listTile, itemCount: 4, shrinkWrap: true)
               else if (filtered.isEmpty)
                 const EmptyStateWidget(
                   icon: Icons.person_search_rounded,
@@ -1189,19 +1190,19 @@ class _EmployerProjectDetailScreenState extends State<EmployerProjectDetailScree
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFF8FAFC),
+                                  color: AppColors.surfaceSecondary,
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(color: const Color(0xFFE2E8F0)),
                                 ),
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Icon(Icons.format_quote_rounded, size: 16, color: Color(0xFF94A3B8)),
+                                    const Icon(Icons.format_quote_rounded, size: 16, color: AppColors.slate400),
                                     const SizedBox(width: 6),
                                     Expanded(
                                       child: Text(
                                         'Lời nhắn: "${app.coverLetter!}"',
-                                        style: const TextStyle(fontSize: 11.5, fontStyle: FontStyle.italic, color: Color(0xFF475569), height: 1.35),
+                                        style: const TextStyle(fontSize: 11.5, fontStyle: FontStyle.italic, color: AppColors.slate600, height: 1.35),
                                       ),
                                     ),
                                   ],
@@ -1209,7 +1210,7 @@ class _EmployerProjectDetailScreenState extends State<EmployerProjectDetailScree
                               ),
                             ],
                             const SizedBox(height: 12),
-                            const Divider(height: 1, color: Color(0xFFE5E7EB)),
+                            const Divider(height: 1, color: AppColors.border),
                             const SizedBox(height: 10),
 
                             // CV Document Box & Actions
@@ -1229,7 +1230,7 @@ class _EmployerProjectDetailScreenState extends State<EmployerProjectDetailScree
                                       ),
                                       child: Row(
                                         children: [
-                                          const Icon(Icons.picture_as_pdf_rounded, color: Color(0xFFDC2626), size: 18),
+                                          const Icon(Icons.picture_as_pdf_rounded, color: AppColors.red600, size: 18),
                                           const SizedBox(width: 6),
                                           Expanded(
                                             child: Column(
@@ -1243,7 +1244,7 @@ class _EmployerProjectDetailScreenState extends State<EmployerProjectDetailScree
                                                 ),
                                                 const Text(
                                                   'Chạm để mở xem CV A4',
-                                                  style: TextStyle(fontSize: 9.5, color: Color(0xFFDC2626), fontWeight: FontWeight.w500),
+                                                  style: TextStyle(fontSize: 9.5, color: AppColors.red600, fontWeight: FontWeight.w500),
                                                 ),
                                               ],
                                             ),
@@ -1417,9 +1418,9 @@ class _PostProjectTabState extends State<PostProjectTab> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: const Color(0xFFFEF3C7),
+                color: AppColors.accentLight,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFF59E0B).withAlpha(100)),
+                border: Border.all(color: AppColors.accent.withAlpha(100)),
               ),
               child: Row(
                 children: [
@@ -1451,7 +1452,7 @@ class _PostProjectTabState extends State<PostProjectTab> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE5E7EB)),
+                border: Border.all(color: AppColors.border),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1495,7 +1496,7 @@ class _PostProjectTabState extends State<PostProjectTab> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE5E7EB)),
+                border: Border.all(color: AppColors.border),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1593,7 +1594,7 @@ class _PostProjectTabState extends State<PostProjectTab> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE5E7EB)),
+                border: Border.all(color: AppColors.border),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1765,7 +1766,7 @@ class _EmployerProfileTabState extends State<EmployerProfileTab> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE5E7EB)),
+              border: Border.all(color: AppColors.border),
               boxShadow: const [
                 BoxShadow(color: Color(0x06000000), blurRadius: 6, offset: Offset(0, 2)),
               ],
@@ -1792,7 +1793,7 @@ class _EmployerProfileTabState extends State<EmployerProfileTab> {
                 const SizedBox(height: 2),
                 Text(
                   p?.contactEmail ?? (auth.user?.email ?? ''),
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                  style: const TextStyle(fontSize: 12, color: AppColors.slate400),
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
@@ -1816,7 +1817,7 @@ class _EmployerProfileTabState extends State<EmployerProfileTab> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE5E7EB)),
+              border: Border.all(color: AppColors.border),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1829,7 +1830,7 @@ class _EmployerProfileTabState extends State<EmployerProfileTab> {
                   const SizedBox(height: 8),
                   const Text('Giới thiệu:', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
                   const SizedBox(height: 4),
-                  Text(p.description!, style: const TextStyle(fontSize: 12, color: Color(0xFF475569), height: 1.4)),
+                  Text(p.description!, style: const TextStyle(fontSize: 12, color: AppColors.slate600, height: 1.4)),
                 ],
               ],
             ),
@@ -1841,7 +1842,7 @@ class _EmployerProfileTabState extends State<EmployerProfileTab> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE5E7EB)),
+              border: Border.all(color: AppColors.border),
             ),
             child: Column(
               children: [
@@ -1852,19 +1853,19 @@ class _EmployerProfileTabState extends State<EmployerProfileTab> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       CreditBadge(balance: credit.balance, isLarge: false),
-                      const Icon(Icons.chevron_right, color: Color(0xFF94A3B8), size: 18),
+                      const Icon(Icons.chevron_right, color: AppColors.slate400, size: 18),
                     ],
                   ),
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen())),
                 ),
-                const Divider(height: 1, indent: 16, endIndent: 16, color: Color(0xFFE5E7EB)),
+                const Divider(height: 1, indent: 16, endIndent: 16, color: AppColors.border),
                 ListTile(
                   leading: const Icon(Icons.lock_outline_rounded, color: Color(0xFF64748B), size: 20),
                   title: const Text('Đổi mật khẩu', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5)),
-                  trailing: const Icon(Icons.chevron_right, color: Color(0xFF94A3B8), size: 18),
+                  trailing: const Icon(Icons.chevron_right, color: AppColors.slate400, size: 18),
                   onTap: () => showDialog(context: context, builder: (_) => const ChangePasswordDialog()),
                 ),
-                const Divider(height: 1, indent: 16, endIndent: 16, color: Color(0xFFE5E7EB)),
+                const Divider(height: 1, indent: 16, endIndent: 16, color: AppColors.border),
                 ListTile(
                   leading: const Icon(Icons.logout_rounded, color: Colors.red, size: 20),
                   title: const Text('Đăng xuất tài khoản', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5, color: Colors.red)),

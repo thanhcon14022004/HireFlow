@@ -15,11 +15,13 @@ class CreditBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(isLarge ? 24 : 18);
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(isLarge ? 24 : 18),
+        borderRadius: radius,
         child: Ink(
           padding: EdgeInsets.symmetric(
             horizontal: isLarge ? 16 : 10,
@@ -27,15 +29,15 @@ class CreditBadge extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFFFEF3C7), Color(0xFFFDE68A)],
+              colors: [AppColors.creditBadgeStart, AppColors.creditBadgeEnd],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.circular(isLarge ? 24 : 18),
-            border: Border.all(color: const Color(0xFFF59E0B).withAlpha(160), width: 1.2),
+            borderRadius: radius,
+            border: Border.all(color: AppColors.accent.withAlpha(160), width: 1.2),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFF59E0B).withAlpha(35),
+                color: AppColors.accent.withAlpha(35),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -48,7 +50,7 @@ class CreditBadge extends StatelessWidget {
                 padding: const EdgeInsets.all(2),
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Color(0xFFD97706),
+                  color: AppColors.accentDark,
                 ),
                 child: Icon(
                   Icons.monetization_on,
@@ -57,19 +59,38 @@ class CreditBadge extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 6),
-              Text(
-                '$balance',
-                style: TextStyle(
-                  color: const Color(0xFF92400E),
-                  fontWeight: FontWeight.w800,
-                  fontSize: isLarge ? 15 : 12.5,
+              // The number slides up and fades in whenever the balance changes.
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 350),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                transitionBuilder: (child, animation) {
+                  final slide = Tween<Offset>(
+                    begin: const Offset(0, 0.6),
+                    end: Offset.zero,
+                  ).animate(animation);
+                  return ClipRect(
+                    child: SlideTransition(
+                      position: slide,
+                      child: FadeTransition(opacity: animation, child: child),
+                    ),
+                  );
+                },
+                child: Text(
+                  '$balance',
+                  key: ValueKey<int>(balance),
+                  style: TextStyle(
+                    color: AppColors.creditBadgeText,
+                    fontWeight: FontWeight.w800,
+                    fontSize: isLarge ? 15 : 12.5,
+                  ),
                 ),
               ),
               const SizedBox(width: 3),
               Text(
                 'cr',
                 style: TextStyle(
-                  color: const Color(0xFFB45309),
+                  color: AppColors.creditBadgeSubText,
                   fontWeight: FontWeight.w600,
                   fontSize: isLarge ? 13 : 11,
                 ),
@@ -90,78 +111,9 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Color bg;
-    Color fg;
-    Color dot;
-    String label = status;
-
-    switch (status.toLowerCase()) {
-      case 'open':
-        bg = const Color(0xFFE8F8EE);
-        fg = const Color(0xFF00B14F);
-        dot = const Color(0xFF00B14F);
-        label = 'Đang nhận hồ sơ';
-        break;
-      case 'closed':
-        bg = const Color(0xFFF3F4F6);
-        fg = const Color(0xFF6B7280);
-        dot = const Color(0xFF9CA3AF);
-        label = 'Đã đóng';
-        break;
-      case 'hidden':
-        bg = const Color(0xFFFFFBEB);
-        fg = const Color(0xFFD97706);
-        dot = const Color(0xFFF59E0B);
-        label = 'Tạm ẩn';
-        break;
-      case 'removed':
-        bg = const Color(0xFFFEE2E2);
-        fg = const Color(0xFFDC2626);
-        dot = const Color(0xFFEF4444);
-        label = 'Đã gỡ bỏ';
-        break;
-      case 'pending':
-        bg = const Color(0xFFEFF6FF);
-        fg = const Color(0xFF2563EB);
-        dot = const Color(0xFF3B82F6);
-        label = 'Chờ xem xét';
-        break;
-      case 'reviewing':
-        bg = const Color(0xFFFFFBEB);
-        fg = const Color(0xFFD97706);
-        dot = const Color(0xFFF59E0B);
-        label = 'Đang đánh giá';
-        break;
-      case 'shortlisted':
-        bg = const Color(0xFFEFF6FF);
-        fg = const Color(0xFF2563EB);
-        dot = const Color(0xFF3B82F6);
-        label = 'Chọn phỏng vấn';
-        break;
-      case 'accepted':
-        bg = const Color(0xFFE8F8EE);
-        fg = const Color(0xFF00B14F);
-        dot = const Color(0xFF00B14F);
-        label = 'Trúng tuyển';
-        break;
-      case 'rejected':
-        bg = const Color(0xFFFEE2E2);
-        fg = const Color(0xFFDC2626);
-        dot = const Color(0xFFEF4444);
-        label = 'Từ chối';
-        break;
-      case 'resolved':
-        bg = const Color(0xFFE8F8EE);
-        fg = const Color(0xFF00B14F);
-        dot = const Color(0xFF00B14F);
-        label = 'Đã giải quyết';
-        break;
-      default:
-        bg = const Color(0xFFF3F4F6);
-        fg = const Color(0xFF6B7280);
-        dot = const Color(0xFF9CA3AF);
-        break;
-    }
+    // All colours + Vietnamese labels live in StatusStyle (app_colors.dart).
+    final style = StatusStyle.of(status);
+    final label = style.label ?? status;
 
     return Container(
       padding: EdgeInsets.symmetric(
@@ -169,9 +121,9 @@ class StatusBadge extends StatelessWidget {
         vertical: isSmall ? 3 : 5,
       ),
       decoration: BoxDecoration(
-        color: bg,
+        color: style.bg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: fg.withAlpha(35), width: 0.8),
+        border: Border.all(color: style.fg.withAlpha(35), width: 0.8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -179,16 +131,13 @@ class StatusBadge extends StatelessWidget {
           Container(
             width: 6,
             height: 6,
-            decoration: BoxDecoration(
-              color: dot,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: style.dot, shape: BoxShape.circle),
           ),
           const SizedBox(width: 5),
           Text(
             label,
             style: TextStyle(
-              color: fg,
+              color: style.fg,
               fontWeight: FontWeight.w700,
               fontSize: isSmall ? 11 : 12,
             ),
@@ -333,6 +282,7 @@ class EmptyStateWidget extends StatelessWidget {
   final String title;
   final String? subtitle;
   final String? buttonText;
+  final IconData buttonIcon;
   final VoidCallback? onButtonPressed;
 
   const EmptyStateWidget({
@@ -341,77 +291,138 @@ class EmptyStateWidget extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.buttonText,
+    this.buttonIcon = Icons.add,
     this.onButtonPressed,
   });
 
   @override
   Widget build(BuildContext context) {
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 48.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(22),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [AppColors.primaryLight, const Color(0xFFF5F3FF)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withAlpha(20),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Icon(icon, size: 48, color: AppColors.primary),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            if (subtitle != null) ...[
-              const SizedBox(height: 8),
+        child: TweenAnimationBuilder<double>(
+          tween: Tween<double>(begin: reduceMotion ? 1.0 : 0.0, end: 1.0),
+          duration: const Duration(milliseconds: 550),
+          curve: Curves.easeOutBack,
+          builder: (context, t, child) {
+            return Opacity(
+              opacity: t.clamp(0.0, 1.0).toDouble(),
+              child: Transform.scale(scale: 0.85 + 0.15 * t, child: child),
+            );
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildIllustration(),
+              const SizedBox(height: 22),
               Text(
-                subtitle!,
+                title,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontSize: 13.5,
-                  color: AppColors.textSecondary,
-                  height: 1.4,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
                 ),
               ),
-            ],
-            if (buttonText != null && onButtonPressed != null) ...[
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: onButtonPressed,
-                icon: const Icon(Icons.add, size: 18),
-                label: Text(buttonText!),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              if (subtitle != null) ...[
+                const SizedBox(height: 8),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 360),
+                  child: Text(
+                    subtitle!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      color: AppColors.textSecondary,
+                      height: 1.45,
+                    ),
+                  ),
                 ),
-              ),
+              ],
+              if (buttonText != null && onButtonPressed != null) ...[
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: onButtonPressed,
+                  icon: Icon(buttonIcon, size: 18),
+                  label: Text(buttonText!),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                    textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
   }
+
+  /// Soft concentric rings + gradient disc around the icon, plus two small
+  /// decorative dots. Pure Flutter shapes, so no image assets are needed.
+  Widget _buildIllustration() {
+    return SizedBox(
+      width: 150,
+      height: 150,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 150,
+            height: 150,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.primary.withAlpha(12),
+            ),
+          ),
+          Container(
+            width: 116,
+            height: 116,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.primary.withAlpha(20),
+            ),
+          ),
+          Container(
+            width: 84,
+            height: 84,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppColors.primaryLight, AppColors.violet50],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withAlpha(30),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Icon(icon, size: 40, color: AppColors.primary),
+          ),
+          Positioned(
+            top: 14,
+            right: 20,
+            child: _dot(10, AppColors.accent.withAlpha(150)),
+          ),
+          Positioned(
+            bottom: 18,
+            left: 16,
+            child: _dot(7, AppColors.primary.withAlpha(120)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static Widget _dot(double size, Color color) => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      );
 }

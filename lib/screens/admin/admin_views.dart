@@ -8,6 +8,7 @@ import '../../models/user_and_profile_models.dart';
 import '../../providers/app_providers.dart';
 import '../../services/app_services.dart';
 import '../../widgets/common_widgets.dart';
+import '../../widgets/skeleton_widgets.dart';
 
 class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
@@ -58,7 +59,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     final auth = context.watch<AuthProvider>();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppColors.surfaceSecondary,
       appBar: AppBar(
         title: Row(
           children: [
@@ -66,7 +67,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
               padding: const EdgeInsets.all(7),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFFD97706), Color(0xFFF59E0B)],
+                  colors: [AppColors.accentDark, AppColors.accent],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -87,7 +88,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                   ),
                   Text(
                     auth.user?.fullName ?? 'Admin',
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF94A3B8)),
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.slate400),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
@@ -101,9 +102,9 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 ? const SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFF59E0B)),
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent),
                   )
-                : const Icon(Icons.bolt, color: Color(0xFFF59E0B), size: 24),
+                : const Icon(Icons.bolt, color: AppColors.accent, size: 24),
             tooltip: 'Chạy tác vụ tự động hóa ngay',
             onPressed: _isAutoRunning ? null : _onTriggerAutomation,
           ),
@@ -113,7 +114,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             onPressed: () => auth.logout(),
           ),
         ],
-        backgroundColor: const Color(0xFF0F172A),
+        backgroundColor: AppColors.secondary,
         foregroundColor: Colors.white,
       ),
       body: _pages[_currentIndex],
@@ -251,7 +252,7 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
 
         Expanded(
           child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? const SkeletonList(type: SkeletonType.listTile, padding: EdgeInsets.all(16))
               : _users.isEmpty
                   ? const EmptyStateWidget(icon: Icons.person_off, title: 'Không tìm thấy người dùng nào')
                   : ListView.separated(
@@ -272,7 +273,7 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
                               children: [
                                 CircleAvatar(
                                   radius: 22,
-                                  backgroundColor: u.isActive ? AppColors.primaryLight : const Color(0xFFFEE2E2),
+                                  backgroundColor: u.isActive ? AppColors.primaryLight : AppColors.errorLight,
                                   child: Icon(
                                     u.isFreelancer ? Icons.person : (u.isEmployer ? Icons.business : Icons.security),
                                     color: u.isActive ? AppColors.primary : Colors.red,
@@ -386,7 +387,7 @@ class _AdminProjectsTabState extends State<AdminProjectsTab> {
 
         Expanded(
           child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? const SkeletonList(type: SkeletonType.listTile, padding: EdgeInsets.all(16))
               : _projects.isEmpty
                   ? const EmptyStateWidget(icon: Icons.assignment_outlined, title: 'Không có dự án nào')
                   : ListView.separated(
@@ -690,7 +691,7 @@ class _AdminAuditTabState extends State<AdminAuditTab> {
           child: ListTile(
             leading: const CircleAvatar(
               backgroundColor: Color(0xFFF1F5F9),
-              child: Icon(Icons.shield_outlined, size: 20, color: Color(0xFF475569)),
+              child: Icon(Icons.shield_outlined, size: 20, color: AppColors.slate600),
             ),
             title: Text(log.action, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5)),
             subtitle: Text(
@@ -724,7 +725,7 @@ class _AdminAuditTabState extends State<AdminAuditTab> {
           ),
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: isPositive ? const Color(0xFFDEF7EC) : const Color(0xFFFEE2E2),
+              backgroundColor: isPositive ? const Color(0xFFDEF7EC) : AppColors.errorLight,
               child: Icon(
                 isPositive ? Icons.arrow_downward : Icons.arrow_upward,
                 color: isPositive ? const Color(0xFF03543F) : const Color(0xFF991B1B),
@@ -741,7 +742,7 @@ class _AdminAuditTabState extends State<AdminAuditTab> {
               style: TextStyle(
                 fontWeight: FontWeight.w900,
                 fontSize: 15,
-                color: isPositive ? const Color(0xFF047857) : const Color(0xFFDC2626),
+                color: isPositive ? const Color(0xFF047857) : AppColors.red600,
               ),
             ),
           ),

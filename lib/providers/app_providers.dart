@@ -261,6 +261,26 @@ class ProjectProvider extends ChangeNotifier {
     }
   }
 
+  void markProjectApplied(int projectId, {int? applicationId, String status = 'Pending'}) {
+    final idx = _projects.indexWhere((p) => p.projectId == projectId);
+    if (idx != -1) {
+      _projects[idx] = _projects[idx].copyWith(
+        hasApplied: true,
+        myApplicationId: applicationId,
+        myApplicationStatus: status,
+      );
+    }
+    if (_currentProject?.projectId == projectId) {
+      _currentProject = _currentProject!.copyWith(
+        hasApplied: true,
+        myApplicationId: applicationId,
+        myApplicationStatus: status,
+        isContactUnlocked: true,
+      );
+    }
+    notifyListeners();
+  }
+
   Future<bool> createProject({
     required String title,
     required String description,

@@ -100,6 +100,9 @@ public class ProjectsController : ControllerBase
         var page = filter.Page < 1 ? 1 : filter.Page;
         var pageSize = filter.PageSize is < 1 or > 50 ? 10 : filter.PageSize;
 
+        var currentUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        int.TryParse(currentUserIdStr, out var currentUserId);
+
         var items = await query
             .OrderByDescending(p => p.CreatedAt)
             .Skip((page - 1) * pageSize)
@@ -123,7 +126,14 @@ public class ProjectsController : ControllerBase
                 CreatedAt = p.CreatedAt,
                 PublishedAt = p.PublishedAt,
                 Skills = p.Skills.Select(s => s.SkillName).ToList(),
-                ApplicantCount = p.Applications.Count
+                ApplicantCount = p.Applications.Count,
+                HasApplied = currentUserId > 0 && p.Applications.Any(a => a.FreelancerId == currentUserId),
+                MyApplicationStatus = currentUserId > 0
+                    ? p.Applications.Where(a => a.FreelancerId == currentUserId).Select(a => a.Status).FirstOrDefault()
+                    : null,
+                MyApplicationId = currentUserId > 0
+                    ? p.Applications.Where(a => a.FreelancerId == currentUserId).Select(a => (int?)a.ApplicationId).FirstOrDefault()
+                    : null
             })
             .ToListAsync();
 

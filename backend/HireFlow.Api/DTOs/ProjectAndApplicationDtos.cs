@@ -20,6 +20,9 @@ public class ProjectSummaryDto
     public DateTime? PublishedAt { get; set; }
     public List<string> Skills { get; set; } = new();
     public int ApplicantCount { get; set; }
+    public bool HasApplied { get; set; }
+    public int? MyApplicationId { get; set; }
+    public string? MyApplicationStatus { get; set; }
 }
 
 public class ProjectDetailDto : ProjectSummaryDto
@@ -28,9 +31,6 @@ public class ProjectDetailDto : ProjectSummaryDto
     public bool IsContactUnlocked { get; set; }
     public string? ContactEmail { get; set; }
     public string? ContactPhone { get; set; }
-    public bool HasApplied { get; set; }
-    public int? MyApplicationId { get; set; }
-    public string? MyApplicationStatus { get; set; }
 }
 
 public class CreateProjectRequest

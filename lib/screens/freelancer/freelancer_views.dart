@@ -588,6 +588,15 @@ class _JobSearchTabState extends State<JobSearchTab> {
   }
 
   void _onQuickApply(ProjectModel p) {
+    if (p.hasApplied) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bạn đã nộp hồ sơ ứng tuyển vào tin này rồi (Trạng thái: Chờ xem xét).'),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+      return;
+    }
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -847,7 +856,7 @@ class _JobSearchTabState extends State<JobSearchTab> {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  StatusBadge(status: p.status, isSmall: true),
+                  StatusBadge(status: p.hasApplied ? (p.myApplicationStatus ?? 'Pending') : p.status, isSmall: true),
                 ],
               ),
               const SizedBox(height: 10),
@@ -952,21 +961,29 @@ class _JobSearchTabState extends State<JobSearchTab> {
                   // Quick Action
                   if (p.hasApplied)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                       decoration: BoxDecoration(
-                        color: AppColors.primaryLight,
+                        color: const Color(0xFFEFF6FF),
                         borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFFBFDBFE)),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.check_circle_rounded, size: 12, color: AppColors.primary),
-                          SizedBox(width: 3),
-                          Text('Đã nộp', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                          const Icon(Icons.hourglass_top_rounded, size: 12.5, color: Color(0xFF2563EB)),
+                          const SizedBox(width: 4),
+                          Text(
+                            p.myApplicationStatus == 'Reviewing'
+                                ? 'Đang đánh giá'
+                                : (p.myApplicationStatus == 'Accepted'
+                                    ? 'Đã duyệt'
+                                    : (p.myApplicationStatus == 'Rejected' ? 'Từ chối' : 'Chờ xem xét')),
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF2563EB)),
+                          ),
                         ],
                       ),
                     )
-                  else if (p.isOpen)
+                  else if (p.isOpen && !p.isExpired)
                     InkWell(
                       onTap: () => _onQuickApply(p),
                       borderRadius: BorderRadius.circular(6),
@@ -1019,6 +1036,16 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   }
 
   void _onApply() {
+    final project = context.read<ProjectProvider>().currentProject;
+    if (project != null && project.hasApplied) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bạn đã nộp hồ sơ ứng tuyển vào tin này rồi (Trạng thái: Chờ xem xét).'),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+      return;
+    }
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1150,7 +1177,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                           ],
                         ),
                       ),
-                      StatusBadge(status: project.status, isSmall: true),
+                      StatusBadge(status: project.hasApplied ? (project.myApplicationStatus ?? 'Pending') : project.status, isSmall: true),
                     ],
                   ),
                   const SizedBox(height: 14),
@@ -1550,18 +1577,19 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                         ? Container(
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
-                              color: AppColors.primaryLight,
+                              color: const Color(0xFFEFF6FF),
                               borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFBFDBFE)),
                             ),
                             alignment: Alignment.center,
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 16),
+                                const Icon(Icons.hourglass_top_rounded, color: Color(0xFF2563EB), size: 16),
                                 const SizedBox(width: 6),
                                 Text(
-                                  'Đã nộp hồ sơ (${project.myApplicationStatus ?? "Chờ duyệt"})',
-                                  style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.primary, fontSize: 13.5),
+                                  'Đã nộp hồ sơ (${project.myApplicationStatus == "Pending" ? "Chờ xem xét" : (project.myApplicationStatus ?? "Chờ xem xét")})',
+                                  style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF2563EB), fontSize: 13.5),
                                 ),
                               ],
                             ),
@@ -1664,10 +1692,13 @@ class _ApplyModalState extends State<ApplyModal> {
       if (success) {
         await credit.fetchBalance();
         auth.updateCreditBalance(credit.balance);
+        projectProvider.markProjectApplied(widget.projectId, status: 'Pending');
+        projectProvider.fetchProjects();
         projectProvider.fetchProjectDetail(widget.projectId);
+        appProvider.fetchMyApplications();
         nav.pop();
         messenger.showSnackBar(
-          const SnackBar(content: Text('Nộp hồ sơ ứng tuyển thành công (-3 credits)!'), backgroundColor: AppColors.success),
+          const SnackBar(content: Text('Nộp hồ sơ ứng tuyển thành công (-3 credits)! Trạng thái: Chờ xem xét.'), backgroundColor: AppColors.success),
         );
       } else {
         messenger.showSnackBar(

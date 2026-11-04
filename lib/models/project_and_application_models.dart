@@ -79,7 +79,57 @@ class ProjectModel {
   bool get isOpen => status == 'Open';
   bool get isClosed => status == 'Closed';
   bool get isExpired => deadline != null && deadline!.isBefore(DateTime.now());
-  bool get canApply => isOpen && !isExpired;
+  bool get canApply => isOpen && !isExpired && !hasApplied;
+
+  ProjectModel copyWith({
+    int? projectId,
+    int? employerId,
+    String? employerName,
+    String? companyName,
+    String? title,
+    String? description,
+    double? budgetMin,
+    double? budgetMax,
+    String? currencyCode,
+    String? experienceLevel,
+    DateTime? deadline,
+    String? status,
+    DateTime? createdAt,
+    DateTime? publishedAt,
+    List<String>? skills,
+    int? applicantCount,
+    bool? isContactUnlocked,
+    String? contactEmail,
+    String? contactPhone,
+    bool? hasApplied,
+    int? myApplicationId,
+    String? myApplicationStatus,
+  }) {
+    return ProjectModel(
+      projectId: projectId ?? this.projectId,
+      employerId: employerId ?? this.employerId,
+      employerName: employerName ?? this.employerName,
+      companyName: companyName ?? this.companyName,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      budgetMin: budgetMin ?? this.budgetMin,
+      budgetMax: budgetMax ?? this.budgetMax,
+      currencyCode: currencyCode ?? this.currencyCode,
+      experienceLevel: experienceLevel ?? this.experienceLevel,
+      deadline: deadline ?? this.deadline,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      publishedAt: publishedAt ?? this.publishedAt,
+      skills: skills ?? this.skills,
+      applicantCount: applicantCount ?? this.applicantCount,
+      isContactUnlocked: isContactUnlocked ?? this.isContactUnlocked,
+      contactEmail: contactEmail ?? this.contactEmail,
+      contactPhone: contactPhone ?? this.contactPhone,
+      hasApplied: hasApplied ?? this.hasApplied,
+      myApplicationId: myApplicationId ?? this.myApplicationId,
+      myApplicationStatus: myApplicationStatus ?? this.myApplicationStatus,
+    );
+  }
 }
 
 class ApplicationModel {

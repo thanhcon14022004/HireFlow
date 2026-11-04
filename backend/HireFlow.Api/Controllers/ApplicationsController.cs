@@ -69,10 +69,15 @@ public class ApplicationsController : ControllerBase
         }
 
         // 3. Check duplicate application
-        var alreadyApplied = await _db.Applications.AnyAsync(a => a.ProjectId == projectId && a.FreelancerId == userId);
-        if (alreadyApplied)
+        var existingApp = await _db.Applications.FirstOrDefaultAsync(a => a.ProjectId == projectId && a.FreelancerId == userId);
+        if (existingApp != null && existingApp.Status != "Rejected")
         {
-            throw new AppException("Bạn đã nộp hồ sơ ứng tuyển vào dự án này rồi.", "ALREADY_APPLIED", System.Net.HttpStatusCode.Conflict);
+            var statusVn = existingApp.Status == "Pending" ? "Chờ xem xét"
+                         : existingApp.Status == "Reviewing" ? "Đang đánh giá"
+                         : existingApp.Status == "Shortlisted" ? "Mời phỏng vấn"
+                         : existingApp.Status == "Accepted" ? "Đã được nhận"
+                         : existingApp.Status;
+            throw new AppException($"Bạn đã nộp hồ sơ ứng tuyển vào dự án này rồi (Trạng thái: {statusVn}).", "ALREADY_APPLIED", System.Net.HttpStatusCode.Conflict);
         }
 
         // 4. Verify credits
@@ -87,29 +92,53 @@ public class ApplicationsController : ControllerBase
         using var tx = await _db.Database.BeginTransactionAsync();
         try
         {
-            var application = new Application
-            {
-                ProjectId = projectId,
-                FreelancerId = userId,
-                DocumentId = request.DocumentId,
-                CoverLetter = request.CoverLetter?.Trim(),
-                Status = "Pending",
-                AppliedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
+            Application application;
+            var isReapplying = existingApp != null && existingApp.Status == "Rejected";
 
-            _db.Applications.Add(application);
-            await _db.SaveChangesAsync();
-
-            // Initial status history record
-            _db.ApplicationStatusHistories.Add(new ApplicationStatusHistory
+            if (isReapplying)
             {
-                ApplicationId = application.ApplicationId,
-                OldStatus = null,
-                NewStatus = "Pending",
-                ChangedByUserId = userId,
-                ChangedAt = DateTime.UtcNow
-            });
+                application = existingApp!;
+                application.DocumentId = request.DocumentId;
+                application.CoverLetter = request.CoverLetter?.Trim();
+                application.Status = "Pending";
+                application.AppliedAt = DateTime.UtcNow;
+                application.UpdatedAt = DateTime.UtcNow;
+
+                _db.ApplicationStatusHistories.Add(new ApplicationStatusHistory
+                {
+                    ApplicationId = application.ApplicationId,
+                    OldStatus = "Rejected",
+                    NewStatus = "Pending",
+                    ChangedByUserId = userId,
+                    ChangedAt = DateTime.UtcNow
+                });
+            }
+            else
+            {
+                application = new Application
+                {
+                    ProjectId = projectId,
+                    FreelancerId = userId,
+                    DocumentId = request.DocumentId,
+                    CoverLetter = request.CoverLetter?.Trim(),
+                    Status = "Pending",
+                    AppliedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                _db.Applications.Add(application);
+                await _db.SaveChangesAsync();
+
+                // Initial status history record
+                _db.ApplicationStatusHistories.Add(new ApplicationStatusHistory
+                {
+                    ApplicationId = application.ApplicationId,
+                    OldStatus = null,
+                    NewStatus = "Pending",
+                    ChangedByUserId = userId,
+                    ChangedAt = DateTime.UtcNow
+                });
+            }
 
             // Deduct credits
             var deduction = await _creditService.DeductCreditsAsync(
@@ -118,7 +147,7 @@ public class ApplicationsController : ControllerBase
                 "ApplicationFee",
                 "Application",
                 application.ApplicationId.ToString(),
-                $"Ứng tuyển dự án: {project.Title}");
+                isReapplying ? $"Nộp lại hồ sơ dự án: {project.Title}" : $"Ứng tuyển dự án: {project.Title}");
 
             if (!deduction.Success)
             {
@@ -129,13 +158,13 @@ public class ApplicationsController : ControllerBase
             await _db.SaveChangesAsync();
             await tx.CommitAsync();
 
-            await _audit.LogAsync(userId, "ApplicationSubmitted", "Application", application.ApplicationId.ToString(), $"Ứng tuyển thành công (-{cost} credits)");
+            await _audit.LogAsync(userId, isReapplying ? "ApplicationReapplied" : "ApplicationSubmitted", "Application", application.ApplicationId.ToString(), $"{(isReapplying ? "Nộp lại hồ sơ" : "Ứng tuyển")} thành công (-{cost} credits)");
 
             return Ok(new
             {
                 applicationId = application.ApplicationId,
                 status = application.Status,
-                message = "Nộp hồ sơ ứng tuyển thành công!"
+                message = isReapplying ? "Nộp lại hồ sơ ứng tuyển thành công!" : "Nộp hồ sơ ứng tuyển thành công!"
             });
         }
         catch (DbUpdateException ex)

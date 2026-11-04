@@ -629,10 +629,13 @@ class _JobSearchTabState extends State<JobSearchTab> {
   }
 
   void _onQuickApply(ProjectModel p) {
-    if (p.hasApplied) {
+    if (p.hasApplied && p.myApplicationStatus != 'Rejected') {
+      final statusVn = p.myApplicationStatus == 'Reviewing'
+          ? 'Đang đánh giá'
+          : (p.myApplicationStatus == 'Accepted' ? 'Đã duyệt' : 'Chờ xem xét');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Bạn đã nộp hồ sơ ứng tuyển vào tin này rồi (Trạng thái: Chờ xem xét).'),
+        SnackBar(
+          content: Text('Bạn đã nộp hồ sơ ứng tuyển vào tin này rồi (Trạng thái: $statusVn).'),
           backgroundColor: AppColors.warning,
         ),
       );
@@ -643,7 +646,7 @@ class _JobSearchTabState extends State<JobSearchTab> {
       isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => ApplyModal(projectId: p.projectId),
+      builder: (ctx) => ApplyModal(projectId: p.projectId, isReapplying: p.myApplicationStatus == 'Rejected'),
     );
   }
 
@@ -1000,7 +1003,7 @@ class _JobSearchTabState extends State<JobSearchTab> {
                           ),
                   ),
                   // Quick Action
-                  if (p.hasApplied)
+                  if (p.hasApplied && p.myApplicationStatus != 'Rejected')
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                       decoration: BoxDecoration(
@@ -1016,13 +1019,54 @@ class _JobSearchTabState extends State<JobSearchTab> {
                           Text(
                             p.myApplicationStatus == 'Reviewing'
                                 ? 'Đang đánh giá'
-                                : (p.myApplicationStatus == 'Accepted'
-                                    ? 'Đã duyệt'
-                                    : (p.myApplicationStatus == 'Rejected' ? 'Từ chối' : 'Chờ xem xét')),
+                                : (p.myApplicationStatus == 'Accepted' ? 'Đã duyệt' : 'Chờ xem xét'),
                             style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF2563EB)),
                           ),
                         ],
                       ),
+                    )
+                  else if (p.hasApplied && p.myApplicationStatus == 'Rejected')
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF2F2),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFFECACA)),
+                          ),
+                          child: const Text(
+                            'Bị từ chối',
+                            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFFDC2626)),
+                          ),
+                        ),
+                        if (p.isOpen && !p.isExpired) ...[
+                          const SizedBox(width: 6),
+                          InkWell(
+                            onTap: () => _onQuickApply(p),
+                            borderRadius: BorderRadius.circular(6),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.replay_rounded, size: 12, color: Colors.white),
+                                  SizedBox(width: 3),
+                                  Text(
+                                    'Nộp lại',
+                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     )
                   else if (p.isOpen && !p.isExpired)
                     InkWell(
@@ -1078,10 +1122,13 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
 
   void _onApply() {
     final project = context.read<ProjectProvider>().currentProject;
-    if (project != null && project.hasApplied) {
+    if (project != null && project.hasApplied && project.myApplicationStatus != 'Rejected') {
+      final statusVn = project.myApplicationStatus == 'Reviewing'
+          ? 'Đang đánh giá'
+          : (project.myApplicationStatus == 'Accepted' ? 'Đã duyệt' : 'Chờ xem xét');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Bạn đã nộp hồ sơ ứng tuyển vào tin này rồi (Trạng thái: Chờ xem xét).'),
+        SnackBar(
+          content: Text('Bạn đã nộp hồ sơ ứng tuyển vào tin này rồi (Trạng thái: $statusVn).'),
           backgroundColor: AppColors.warning,
         ),
       );
@@ -1092,7 +1139,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => ApplyModal(projectId: widget.projectId),
+      builder: (ctx) => ApplyModal(projectId: widget.projectId, isReapplying: project?.myApplicationStatus == 'Rejected'),
     );
   }
 
@@ -1602,8 +1649,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                                 const SizedBox(height: 14),
                                 ElevatedButton.icon(
                                   onPressed: project.canApply ? _onApply : null,
-                                  icon: const Icon(Icons.send_rounded, size: 16),
-                                  label: const Text('Ứng tuyển ngay để lấy thông tin liên hệ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                  icon: Icon(project.myApplicationStatus == 'Rejected' ? Icons.replay_rounded : Icons.send_rounded, size: 16),
+                                  label: Text(project.myApplicationStatus == 'Rejected' ? 'Nộp lại hồ sơ vào tin này' : 'Ứng tuyển ngay để lấy thông tin liên hệ', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: AppColors.primary,
                                     foregroundColor: Colors.white,
@@ -1648,7 +1695,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: project.hasApplied
+                    child: (project.hasApplied && project.myApplicationStatus != 'Rejected')
                         ? Row(
                             children: [
                               Expanded(
@@ -1712,22 +1759,81 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                               ),
                             ],
                           )
-                        : ElevatedButton.icon(
-                            onPressed: project.canApply ? _onApply : null,
-                            icon: const Icon(Icons.send_rounded, size: 16),
-                            label: Text(
-                              project.isExpired
-                                  ? 'Hết hạn nộp hồ sơ'
-                                  : (project.isOpen ? 'Ứng tuyển ngay (3 credits)' : 'Tin tuyển dụng đã đóng'),
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: project.canApply ? AppColors.primary : Colors.grey.shade400,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
-                          ),
+                        : (project.hasApplied && project.myApplicationStatus == 'Rejected')
+                            ? Row(
+                                children: [
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: project.isOpen && !project.isExpired ? _onApply : null,
+                                      icon: const Icon(Icons.replay_rounded, size: 16),
+                                      label: Text(
+                                        project.isExpired ? 'Hết hạn nộp hồ sơ' : 'Nộp lại hồ sơ (3 cr)',
+                                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.primary,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(vertical: 12),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  InkWell(
+                                    onTap: () async {
+                                      final chatProvider = context.read<ChatProvider>();
+                                      final conv = await chatProvider.startConversation(
+                                        projectId: project.projectId,
+                                        employerId: project.employerId,
+                                      );
+                                      if (conv != null && context.mounted) {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) => ChatScreen(
+                                              conversationId: conv.conversationId,
+                                              otherPartyName: conv.otherPartyName,
+                                              otherPartyRole: conv.otherPartyRole,
+                                              projectTitle: conv.projectTitle,
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFEF2F2),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: const Color(0xFFFECACA)),
+                                      ),
+                                      child: const Row(
+                                        children: [
+                                          Icon(Icons.chat_bubble_rounded, color: AppColors.error, size: 16),
+                                          SizedBox(width: 4),
+                                          Text('Chat', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold, fontSize: 13)),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : ElevatedButton.icon(
+                                onPressed: project.canApply ? _onApply : null,
+                                icon: const Icon(Icons.send_rounded, size: 16),
+                                label: Text(
+                                  project.isExpired
+                                      ? 'Hết hạn nộp hồ sơ'
+                                      : (project.isOpen ? 'Ứng tuyển ngay (3 credits)' : 'Tin tuyển dụng đã đóng'),
+                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: project.canApply ? AppColors.primary : Colors.grey.shade400,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                              ),
                   ),
                 ],
               ),
@@ -1741,8 +1847,9 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
 
 class ApplyModal extends StatefulWidget {
   final int projectId;
+  final bool isReapplying;
 
-  const ApplyModal({super.key, required this.projectId});
+  const ApplyModal({super.key, required this.projectId, this.isReapplying = false});
 
   @override
   State<ApplyModal> createState() => _ApplyModalState();
@@ -1816,7 +1923,12 @@ class _ApplyModalState extends State<ApplyModal> {
         appProvider.fetchMyApplications();
         nav.pop();
         messenger.showSnackBar(
-          const SnackBar(content: Text('Nộp hồ sơ ứng tuyển thành công (-3 credits)! Trạng thái: Chờ xem xét.'), backgroundColor: AppColors.success),
+          SnackBar(
+            content: Text(widget.isReapplying
+                ? 'Nộp lại hồ sơ ứng tuyển thành công (-3 credits)! Trạng thái: Chờ xem xét.'
+                : 'Nộp hồ sơ ứng tuyển thành công (-3 credits)! Trạng thái: Chờ xem xét.'),
+            backgroundColor: AppColors.success,
+          ),
         );
       } else {
         messenger.showSnackBar(
@@ -1846,7 +1958,7 @@ class _ApplyModalState extends State<ApplyModal> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Nộp hồ sơ ứng tuyển', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: AppColors.textPrimary)),
+                Text(widget.isReapplying ? 'Nộp lại hồ sơ ứng tuyển' : 'Nộp hồ sơ ứng tuyển', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: AppColors.textPrimary)),
                 IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => Navigator.pop(context)),
               ],
             ),
@@ -2032,7 +2144,7 @@ class _ApplyModalState extends State<ApplyModal> {
               ),
               child: _isSubmitting
                   ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Text('Nộp hồ sơ ứng tuyển (-3 credits)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                  : Text(widget.isReapplying ? 'Nộp lại hồ sơ ngay (-3 credits)' : 'Nộp hồ sơ ứng tuyển (-3 credits)', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -2375,6 +2487,36 @@ class _MyApplicationsTabState extends State<MyApplicationsTab> {
                                       child: const Text('Xem tin', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary)),
                                     ),
                                   ),
+                                  if (app.status == 'Rejected') ...[
+                                    const SizedBox(width: 6),
+                                    InkWell(
+                                      onTap: () {
+                                        showModalBottomSheet(
+                                          context: context,
+                                          isScrollControlled: true,
+                                          backgroundColor: Colors.white,
+                                          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+                                          builder: (ctx) => ApplyModal(projectId: app.projectId, isReapplying: true),
+                                        );
+                                      },
+                                      borderRadius: BorderRadius.circular(6),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary,
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.replay_rounded, size: 13, color: Colors.white),
+                                            SizedBox(width: 3),
+                                            Text('Nộp lại', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ],

@@ -69,5 +69,12 @@ class ApiConstants {
   static String adminReportStatus(int id) => '/api/admin/reports/$id';
   static const String adminCreditTransactions = '/api/admin/credit-transactions';
   static const String adminAuditLogs = '/api/admin/audit-logs';
+
+  // Chat endpoints
+  static const String chatConversations = '/api/chat/conversations';
+  static String chatConversation(int id) => '/api/chat/conversations/$id';
+  static String chatMessages(int id) => '/api/chat/conversations/$id/messages';
+  static const String chatStart = '/api/chat/start';
+  static const String chatUnreadCount = '/api/chat/unread-count';
 }
 

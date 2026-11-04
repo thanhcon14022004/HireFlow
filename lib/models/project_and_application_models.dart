@@ -79,7 +79,8 @@ class ProjectModel {
   bool get isOpen => status == 'Open';
   bool get isClosed => status == 'Closed';
   bool get isExpired => deadline != null && deadline!.isBefore(DateTime.now());
-  bool get canApply => isOpen && !isExpired && !hasApplied;
+  bool get isRejected => myApplicationStatus == 'Rejected';
+  bool get canApply => isOpen && !isExpired && (!hasApplied || isRejected);
 
   ProjectModel copyWith({
     int? projectId,

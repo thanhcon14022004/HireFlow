@@ -56,3 +56,9 @@ app.*.map.json
 *.userosscache
 *.sln.docstates
 storage/cvs/
+backend/HireFlow.Api/storage/cvs/*
+!backend/HireFlow.Api/storage/cvs/.gitkeep
+
+# Root screenshots & temp test captures
+/*.png
+

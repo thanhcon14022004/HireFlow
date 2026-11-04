@@ -53,6 +53,9 @@ class ApiConstants {
   static const String createPurchase = '/api/credits/purchases';
   static String purchaseDetail(int id) => '/api/credits/purchases/$id';
   static String simulatePurchase(int id) => '/api/credits/purchases/$id/simulate-success';
+  static String checkSepPayPayment(int purchaseId) => '/api/credits/purchases/$purchaseId/check-sepay';
+  static String checkMoMoPayment(int purchaseId) => '/api/credits/purchases/$purchaseId/check-momo';
+  static String simulateMoMoPurchase(int purchaseId) => '/api/credits/purchases/$purchaseId/simulate-momo-success';
   static String unlockContact(int projectId) => '/api/projects/$projectId/contact-unlock';
   static String getEmployerContact(int projectId) => '/api/projects/$projectId/employer-contact';
 

@@ -33,20 +33,25 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 
 builder.Services.AddDbContext<HireFlowDbContext>(options =>
 {
-    options.UseSqlServer(connectionString, sqlOptions =>
-    {
-        sqlOptions.EnableRetryOnFailure(maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorNumbersToAdd: null);
-    });
+    options.UseSqlServer(connectionString);
 });
 
 // Register Application Services
+builder.Services.AddHttpClient();
 builder.Services.AddScoped<IPasswordHasherService, PasswordHasherService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
 builder.Services.AddScoped<ICreditService, CreditService>();
 builder.Services.AddScoped<IPaymentGateway, DevPaymentGateway>();
+builder.Services.AddScoped<ISepPayService, SepPayService>();
+builder.Services.AddScoped<IMoMoPaymentService, MoMoPaymentService>();
 builder.Services.AddScoped<IEmailService, DevEmailService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
+
+// Register Automation Background Worker & Service
+builder.Services.AddSingleton<HireFlowAutomationService>();
+builder.Services.AddSingleton<IHireFlowAutomationService>(sp => sp.GetRequiredService<HireFlowAutomationService>());
+builder.Services.AddHostedService(sp => sp.GetRequiredService<HireFlowAutomationService>());
 
 // Configure JWT Authentication
 var jwtSecret = builder.Configuration["Jwt:Secret"] ?? "HireFlow_Super_Secure_Secret_Key_For_Development_32_Chars_Long";

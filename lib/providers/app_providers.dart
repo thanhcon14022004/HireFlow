@@ -6,10 +6,14 @@ import '../services/app_services.dart';
 
 class AuthProvider extends ChangeNotifier {
   UserModel? _user;
+  FreelancerProfileModel? _freelancerProfile;
+  EmployerProfileModel? _employerProfile;
   bool _isLoading = true;
   String? _errorMessage;
 
   UserModel? get user => _user;
+  FreelancerProfileModel? get freelancerProfile => _freelancerProfile;
+  EmployerProfileModel? get employerProfile => _employerProfile;
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _user != null;
   String? get errorMessage => _errorMessage;
@@ -23,8 +27,101 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
     try {
       _user = await AuthService.getCurrentUser();
+      if (_user != null) {
+        await fetchProfile();
+      }
     } catch (_) {
       _user = null;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchProfile() async {
+    if (_user == null) return;
+    try {
+      if (_user!.isFreelancer) {
+        _freelancerProfile = await ProfileService.getFreelancerProfile();
+      } else if (_user!.isEmployer) {
+        _employerProfile = await ProfileService.getEmployerProfile();
+      }
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  Future<bool> updateFreelancerProfile({
+    String? fullName,
+    String? headline,
+    String? bio,
+    int? experienceYears,
+    List<String>? skills,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      _freelancerProfile = await ProfileService.updateFreelancerProfile(
+        fullName: fullName,
+        headline: headline,
+        bio: bio,
+        experienceYears: experienceYears,
+        skills: skills,
+      );
+      if (fullName != null && _user != null) {
+        _user = UserModel(
+          userId: _user!.userId,
+          fullName: fullName,
+          email: _user!.email,
+          role: _user!.role,
+          isActive: _user!.isActive,
+          creditBalance: _user!.creditBalance,
+        );
+      }
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> updateEmployerProfile({
+    String? fullName,
+    String? companyName,
+    String? description,
+    String? publicDisplayName,
+    String? contactEmail,
+    String? contactPhone,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      _employerProfile = await ProfileService.updateEmployerProfile(
+        fullName: fullName,
+        companyName: companyName,
+        description: description,
+        publicDisplayName: publicDisplayName,
+        contactEmail: contactEmail,
+        contactPhone: contactPhone,
+      );
+      if (fullName != null && _user != null) {
+        _user = UserModel(
+          userId: _user!.userId,
+          fullName: fullName,
+          email: _user!.email,
+          role: _user!.role,
+          isActive: _user!.isActive,
+          creditBalance: _user!.creditBalance,
+        );
+      }
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      return false;
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -37,6 +134,7 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
     try {
       _user = await AuthService.login(email: email, password: password);
+      await fetchProfile();
       _isLoading = false;
       notifyListeners();
       return true;
@@ -64,6 +162,7 @@ class AuthProvider extends ChangeNotifier {
         password: password,
         role: role,
       );
+      await fetchProfile();
       _isLoading = false;
       notifyListeners();
       return true;
@@ -78,6 +177,8 @@ class AuthProvider extends ChangeNotifier {
   Future<void> logout() async {
     await AuthService.logout();
     _user = null;
+    _freelancerProfile = null;
+    _employerProfile = null;
     notifyListeners();
   }
 
@@ -112,12 +213,14 @@ class ProjectProvider extends ChangeNotifier {
 
   List<ProjectModel> get projects => _projects;
   List<ProjectModel> get myEmployerProjects => _myEmployerProjects;
+  List<ProjectModel> get employerProjects => _myEmployerProjects;
   ProjectModel? get currentProject => _currentProject;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
   Future<void> fetchProjects({
     String? keyword,
+    String? search,
     String? skill,
     String? experienceLevel,
     double? minBudget,
@@ -129,7 +232,7 @@ class ProjectProvider extends ChangeNotifier {
     notifyListeners();
     try {
       _projects = await ProjectService.getProjects(
-        keyword: keyword,
+        keyword: keyword ?? search,
         skill: skill,
         experienceLevel: experienceLevel,
         minBudget: minBudget,
@@ -158,7 +261,7 @@ class ProjectProvider extends ChangeNotifier {
     }
   }
 
-  Future<int?> createProject({
+  Future<bool> createProject({
     required String title,
     required String description,
     double? budgetMin,
@@ -172,7 +275,7 @@ class ProjectProvider extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
     try {
-      final projectId = await ProjectService.createProject(
+      await ProjectService.createProject(
         title: title,
         description: description,
         budgetMin: budgetMin,
@@ -183,10 +286,10 @@ class ProjectProvider extends ChangeNotifier {
         skills: skills,
       );
       await fetchEmployerProjects();
-      return projectId;
+      return true;
     } catch (e) {
       _errorMessage = e.toString();
-      return null;
+      return false;
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -352,21 +455,26 @@ class DocumentProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> uploadCv(List<int> bytes, String filename, {bool isDefault = false}) async {
+  Future<DocumentModel?> uploadCvAndReturn(List<int> bytes, String filename, {bool isDefault = false}) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
     try {
-      await DocumentService.uploadCv(bytes, filename, isDefault: isDefault);
+      final doc = await DocumentService.uploadCv(bytes, filename, isDefault: isDefault);
       await fetchCvs();
-      return true;
+      return doc;
     } catch (e) {
       _errorMessage = e.toString();
-      return false;
+      return null;
     } finally {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<bool> uploadCv(List<int> bytes, String filename, {bool isDefault = false}) async {
+    final doc = await uploadCvAndReturn(bytes, filename, isDefault: isDefault);
+    return doc != null;
   }
 
   Future<bool> setDefault(int documentId) async {
@@ -380,6 +488,8 @@ class DocumentProvider extends ChangeNotifier {
       return false;
     }
   }
+
+  Future<bool> setDefaultCv(int documentId) => setDefault(documentId);
 
   Future<bool> deleteCv(int documentId) async {
     try {
@@ -442,17 +552,75 @@ class CreditProvider extends ChangeNotifier {
     }
   }
 
+  Future<CreditPurchaseModel?> createPurchase({
+    int? packageId,
+    int? customCredits,
+    String paymentProvider = 'SepPay',
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      final purchase = await CreditService.createPurchase(
+        packageId: packageId,
+        customCredits: customCredits,
+        paymentProvider: paymentProvider,
+      );
+      return purchase;
+    } catch (e) {
+      _errorMessage = e.toString();
+      return null;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<SepPayCheckResultModel?> checkSepPayPayment(int purchaseId) async {
+    try {
+      final res = await CreditService.checkSepPayPayment(purchaseId);
+      if (res.status == 'Paid') {
+        if (res.newBalance != null) {
+          _balance = res.newBalance!;
+        } else {
+          await fetchBalance();
+        }
+        await fetchTransactions();
+      }
+      return res;
+    } catch (e) {
+      _errorMessage = e.toString();
+      return null;
+    }
+  }
+
+  Future<SepPayCheckResultModel?> checkMoMoPayment(int purchaseId) async {
+    try {
+      final res = await CreditService.checkMoMoPayment(purchaseId);
+      if (res.status == 'Paid') {
+        if (res.newBalance != null) {
+          _balance = res.newBalance!;
+        } else {
+          await fetchBalance();
+        }
+        await fetchTransactions();
+      }
+      return res;
+    } catch (e) {
+      _errorMessage = e.toString();
+      return null;
+    }
+  }
+
   Future<bool> purchasePackageAndSimulate(int packageId) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
     try {
-      final purchaseRes = await CreditService.createPurchase(packageId);
-      final purchaseId = purchaseRes['creditPurchaseId'] as int;
-      final providerRef = purchaseRes['providerReference'] as String?;
+      final purchase = await CreditService.createPurchase(packageId: packageId);
 
       // Execute simulated dev payment callback
-      final simRes = await CreditService.simulatePaymentSuccess(purchaseId, ref: providerRef);
+      final simRes = await CreditService.simulatePaymentSuccess(purchase.creditPurchaseId, ref: purchase.providerReference);
       if (simRes['newBalance'] != null) {
         _balance = simRes['newBalance'] as int;
       } else {
@@ -468,6 +636,8 @@ class CreditProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<bool> purchasePackage(int packageId) => purchasePackageAndSimulate(packageId);
 
   Future<EmployerContactModel?> unlockContact(int projectId) async {
     _isLoading = true;
@@ -487,4 +657,3 @@ class CreditProvider extends ChangeNotifier {
     }
   }
 }
-

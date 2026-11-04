@@ -48,6 +48,18 @@ public class ApplicationsController : ControllerBase
             throw new AppException("Dự án không tồn tại hoặc đã đóng nhận ứng tuyển.", "PROJECT_NOT_OPEN");
         }
 
+        // 1b. Check if project deadline has passed
+        if (project.Deadline.HasValue && project.Deadline.Value < DateTime.UtcNow)
+        {
+            throw new AppException("Dự án đã quá hạn nộp hồ sơ.", "PROJECT_EXPIRED");
+        }
+
+        // 1c. Defensive check: Cannot apply to own project
+        if (project.EmployerId == userId)
+        {
+            throw new AppException("Bạn không thể ứng tuyển vào dự án do chính mình đăng.", "CANNOT_APPLY_OWN_PROJECT");
+        }
+
         // 2. Check CV ownership and validity
         var document = await _db.FreelancerDocuments
             .FirstOrDefaultAsync(d => d.DocumentId == request.DocumentId && d.FreelancerId == userId && !d.IsDeleted);
@@ -348,6 +360,8 @@ public class ApplicationsController : ControllerBase
 
         var app = await _db.Applications
             .Include(a => a.Project)
+                .ThenInclude(p => p.Employer)
+                    .ThenInclude(e => e.EmployerProfile)
             .FirstOrDefaultAsync(a => a.ApplicationId == applicationId);
 
         if (app == null)
@@ -359,6 +373,18 @@ public class ApplicationsController : ControllerBase
         if (app.Project.EmployerId != userId)
         {
             throw new AppException("Bạn không phải nhà tuyển dụng sở hữu dự án này.", "FORBIDDEN", System.Net.HttpStatusCode.Forbidden);
+        }
+
+        // Project active check
+        if (app.Project.Status == "Closed" || app.Project.Status == "Removed")
+        {
+            throw new AppException("Không thể thay đổi trạng thái hồ sơ của dự án đã đóng hoặc bị gỡ.", "PROJECT_NOT_ACTIVE");
+        }
+
+        // Idempotency: if already in requested status, return early without duplicate history
+        if (string.Equals(app.Status, normalizedStatus, StringComparison.OrdinalIgnoreCase))
+        {
+            return Ok(new { message = $"Hồ sơ đã ở trạng thái '{normalizedStatus}'.", status = normalizedStatus });
         }
 
         var oldStatus = app.Status;
@@ -377,7 +403,74 @@ public class ApplicationsController : ControllerBase
         await _db.SaveChangesAsync();
         await _audit.LogAsync(userId, "ApplicationStatusChanged", "Application", app.ApplicationId.ToString(), $"Thay đổi trạng thái từ {oldStatus} sang {normalizedStatus}");
 
+        // Create UserNotification for candidate
+        var candidateId = app.FreelancerId;
+        var statusVN = normalizedStatus switch
+        {
+            "Reviewing" => "Đang xem xét hồ sơ",
+            "Shortlisted" => "Mời phỏng vấn (Shortlisted)",
+            "Accepted" => "Được chấp thuận trúng tuyển 🎉",
+            "Rejected" => "Từ chối hồ sơ",
+            _ => normalizedStatus
+        };
+        var notifTitle = "HireFlow: Cập nhật trạng thái hồ sơ";
+        var companyName = app.Project.Employer?.EmployerProfile?.CompanyName 
+            ?? app.Project.Employer?.EmployerProfile?.PublicDisplayName 
+            ?? app.Project.Employer?.FullName 
+            ?? "Nhà tuyển dụng";
+        var notifMessage = $"Hồ sơ ứng tuyển vị trí \"{app.Project.Title}\" của bạn vừa được {companyName} chuyển sang: {statusVN}.";
+
+        var notif = new UserNotification
+        {
+            UserId = candidateId,
+            Title = notifTitle,
+            Message = notifMessage,
+            Type = "ApplicationStatus",
+            ReferenceId = app.ApplicationId,
+            IsRead = false,
+            CreatedAt = DateTime.UtcNow
+        };
+        _db.UserNotifications.Add(notif);
+        await _db.SaveChangesAsync();
+
+        // Also trigger real-time Android system notification to the emulator via ADB
+        TriggerEmulatorNotification(notifTitle, notifMessage, $"app_{app.ApplicationId}");
+
         return Ok(new { message = $"Đã cập nhật trạng thái hồ sơ thành '{normalizedStatus}'.", status = normalizedStatus });
+    }
+
+    private static void TriggerEmulatorNotification(string title, string message, string tag = "hireflow_status")
+    {
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                var adbPath = System.IO.Path.Combine(localAppData, "Android", "Sdk", "platform-tools", "adb.exe");
+                if (!System.IO.File.Exists(adbPath))
+                {
+                    adbPath = "adb";
+                }
+
+                var cleanMessage = message.Replace("\"", "'").Replace("\n", " ");
+                var cleanTitle = title.Replace("\"", "'");
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = adbPath,
+                    Arguments = $"shell cmd notification post -S bigtext -t \"{cleanTitle}\" \"{tag}\" \"{cleanMessage}\"",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+                using var proc = System.Diagnostics.Process.Start(psi);
+                proc?.WaitForExit(3000);
+            }
+            catch
+            {
+                // Silently ignore if ADB is not accessible
+            }
+        });
     }
 }
 

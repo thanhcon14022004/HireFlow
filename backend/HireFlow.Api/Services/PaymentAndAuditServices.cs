@@ -38,8 +38,8 @@ public class DevPaymentGateway : IPaymentGateway
 
     public Task<bool> VerifyPaymentAsync(string providerReference, decimal expectedAmount)
     {
-        // For development simulator, returns true if reference starts with DEV-PAY
-        if (!string.IsNullOrWhiteSpace(providerReference) && providerReference.StartsWith("DEV-PAY"))
+        // For development simulator, returns true if reference starts with DEV-PAY or HF
+        if (!string.IsNullOrWhiteSpace(providerReference) && (providerReference.StartsWith("DEV-PAY") || providerReference.StartsWith("HF")))
         {
             return Task.FromResult(true);
         }

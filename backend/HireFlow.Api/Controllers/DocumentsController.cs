@@ -229,6 +229,7 @@ public class DocumentsController : ControllerBase
         }
 
         // CV-008: If referenced by existing application, soft delete / archive to keep historical application intact
+        var wasDefault = doc.IsDefault;
         var isReferenced = await _db.Applications.AnyAsync(a => a.DocumentId == documentId);
         if (isReferenced)
         {
@@ -238,7 +239,26 @@ public class DocumentsController : ControllerBase
         else
         {
             _db.FreelancerDocuments.Remove(doc);
-            await _storage.DeleteFileAsync(doc.StorageKey);
+            try
+            {
+                await _storage.DeleteFileAsync(doc.StorageKey);
+            }
+            catch
+            {
+                // Ignore physical file delete errors
+            }
+        }
+
+        if (wasDefault)
+        {
+            var nextDefault = await _db.FreelancerDocuments
+                .Where(d => d.FreelancerId == userId && d.DocumentId != documentId && !d.IsDeleted)
+                .OrderByDescending(d => d.UploadedAt)
+                .FirstOrDefaultAsync();
+            if (nextDefault != null)
+            {
+                nextDefault.IsDefault = true;
+            }
         }
 
         await _db.SaveChangesAsync();

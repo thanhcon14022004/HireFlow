@@ -18,6 +18,9 @@ public class CreditsController : ControllerBase
     private readonly HireFlowDbContext _db;
     private readonly ICreditService _creditService;
     private readonly IPaymentGateway _paymentGateway;
+    private readonly ISepPayService _sepPayService;
+    private readonly IMoMoPaymentService _moMoService;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly IAuditService _audit;
     private readonly ILogger<CreditsController> _logger;
 
@@ -25,12 +28,18 @@ public class CreditsController : ControllerBase
         HireFlowDbContext db,
         ICreditService creditService,
         IPaymentGateway paymentGateway,
+        ISepPayService sepPayService,
+        IMoMoPaymentService moMoService,
+        IHttpClientFactory httpClientFactory,
         IAuditService audit,
         ILogger<CreditsController> logger)
     {
         _db = db;
         _creditService = creditService;
         _paymentGateway = paymentGateway;
+        _sepPayService = sepPayService;
+        _moMoService = moMoService;
+        _httpClientFactory = httpClientFactory;
         _audit = audit;
         _logger = logger;
     }
@@ -86,7 +95,7 @@ public class CreditsController : ControllerBase
                 CreditPackageId = p.CreditPackageId,
                 Name = p.Name,
                 CreditAmount = p.CreditAmount,
-                PriceAmount = p.PriceAmount,
+                PriceAmount = p.CreditAmount * 5000m, // Rate: 5,000 VND / 1 Credit
                 CurrencyCode = p.CurrencyCode,
                 DisplayOrder = p.DisplayOrder
             })
@@ -100,23 +109,64 @@ public class CreditsController : ControllerBase
     {
         var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-        var package = await _db.CreditPackages.FirstOrDefaultAsync(p => p.CreditPackageId == request.CreditPackageId && p.IsActive);
-        if (package == null)
+        const decimal RATE_PER_CREDIT = 5000m; // 5k / 1 credit
+        int creditsToPurchase;
+        decimal priceAmount;
+        string packageName;
+        int packageId;
+
+        if (request.CustomCredits.HasValue && request.CustomCredits.Value > 0)
         {
-            throw new AppException("Gói credit không tồn tại hoặc đã ngừng cung cấp.", "PACKAGE_NOT_FOUND");
+            creditsToPurchase = request.CustomCredits.Value;
+            priceAmount = creditsToPurchase * RATE_PER_CREDIT;
+            packageName = $"Nạp {creditsToPurchase} Credits (5.000đ/cr)";
+
+            var pkg = await _db.CreditPackages.FirstOrDefaultAsync(p => p.IsActive) 
+                   ?? await _db.CreditPackages.FirstOrDefaultAsync();
+            if (pkg == null)
+            {
+                pkg = new CreditPackage
+                {
+                    Name = "Nạp tùy chọn",
+                    CreditAmount = 1,
+                    PriceAmount = 5000m,
+                    CurrencyCode = "VND",
+                    IsActive = true,
+                    DisplayOrder = 99
+                };
+                _db.CreditPackages.Add(pkg);
+                await _db.SaveChangesAsync();
+            }
+            packageId = pkg.CreditPackageId;
+        }
+        else if (request.CreditPackageId.HasValue && request.CreditPackageId.Value > 0)
+        {
+            var package = await _db.CreditPackages.FirstOrDefaultAsync(p => p.CreditPackageId == request.CreditPackageId.Value && p.IsActive);
+            if (package == null)
+            {
+                throw new AppException("Gói credit không tồn tại hoặc đã ngừng cung cấp.", "PACKAGE_NOT_FOUND");
+            }
+            packageId = package.CreditPackageId;
+            creditsToPurchase = package.CreditAmount;
+            priceAmount = creditsToPurchase * RATE_PER_CREDIT; // 5k / credit
+            packageName = package.Name;
+        }
+        else
+        {
+            throw new AppException("Vui lòng nhập hoặc chọn số lượng credit cần nạp.", "INVALID_CREDIT_AMOUNT");
         }
 
-        var providerRef = $"DEV-PAY-{Guid.NewGuid():N}";
+        var isMoMo = string.Equals(request.PaymentProvider?.Trim(), "MoMo", StringComparison.OrdinalIgnoreCase);
+        var provider = isMoMo ? "MoMo" : "SepPay";
 
         var purchase = new CreditPurchase
         {
             UserId = userId,
-            CreditPackageId = package.CreditPackageId,
-            CreditsPurchased = package.CreditAmount,
-            PriceAmount = package.PriceAmount,
-            CurrencyCode = package.CurrencyCode,
-            PaymentProvider = "DevSimulator",
-            ProviderReference = providerRef,
+            CreditPackageId = packageId,
+            CreditsPurchased = creditsToPurchase,
+            PriceAmount = priceAmount,
+            CurrencyCode = "VND",
+            PaymentProvider = provider,
             Status = "Pending",
             CreatedAt = DateTime.UtcNow
         };
@@ -124,23 +174,131 @@ public class CreditsController : ControllerBase
         _db.CreditPurchases.Add(purchase);
         await _db.SaveChangesAsync();
 
-        var checkoutUrl = await _paymentGateway.CreateCheckoutUrlAsync(purchase);
+        var orderCode = isMoMo ? $"MOMO_HF{purchase.CreditPurchaseId}" : $"HF{purchase.CreditPurchaseId}";
+        purchase.ProviderReference = orderCode;
+        await _db.SaveChangesAsync();
+
+        string qrImageUrl;
+        string? deeplink = null;
+        string? momoPhone = null;
+        string? bankBrand = null;
+        string? accNum = null;
+        string? accHolder = null;
+
+        if (isMoMo)
+        {
+            qrImageUrl = _moMoService.GetQrImageUrl(purchase.PriceAmount, orderCode);
+            deeplink = _moMoService.GetDeeplink(purchase.PriceAmount, orderCode);
+            momoPhone = _moMoService.PhoneNumber;
+            accHolder = _moMoService.AccountHolder;
+        }
+        else
+        {
+            qrImageUrl = _sepPayService.GetQrImageUrl(purchase.PriceAmount, orderCode);
+            bankBrand = _sepPayService.BankBrandName;
+            accNum = _sepPayService.AccountNumber;
+            accHolder = _sepPayService.AccountHolder;
+        }
+
+        var qrProxyUrl = $"{Request.Scheme}://{Request.Host}/api/credits/purchases/{purchase.CreditPurchaseId}/qr";
 
         return Ok(new CreditPurchaseDto
         {
             CreditPurchaseId = purchase.CreditPurchaseId,
             CreditPackageId = purchase.CreditPackageId,
-            PackageName = package.Name,
+            PackageName = packageName,
             CreditsPurchased = purchase.CreditsPurchased,
             PriceAmount = purchase.PriceAmount,
             CurrencyCode = purchase.CurrencyCode,
             PaymentProvider = purchase.PaymentProvider,
-            ProviderReference = purchase.ProviderReference,
+            ProviderReference = orderCode,
+            OrderCode = orderCode,
+            BankBrandName = bankBrand,
+            AccountNumber = accNum,
+            AccountHolder = accHolder,
+            QrImageUrl = qrProxyUrl,
+            Deeplink = deeplink,
+            MoMoPhoneNumber = momoPhone,
             Status = purchase.Status,
-            PaymentUrl = checkoutUrl,
+            PaymentUrl = deeplink ?? qrProxyUrl,
             CreatedAt = purchase.CreatedAt,
+            ExpiresAt = purchase.CreatedAt.AddMinutes(2),
+            RemainingSeconds = 120,
             PaidAt = purchase.PaidAt
         });
+    }
+
+    [HttpGet("api/credits/purchases/{purchaseId}/qr")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetPurchaseQr(int purchaseId)
+    {
+        var purchase = await _db.CreditPurchases.FindAsync(purchaseId);
+        if (purchase == null) return NotFound("Giao dịch không tồn tại.");
+
+        var orderCode = purchase.ProviderReference ?? $"HF{purchase.CreditPurchaseId}";
+        var isMoMo = string.Equals(purchase.PaymentProvider, "MoMo", StringComparison.OrdinalIgnoreCase);
+        var qrUrl = isMoMo 
+            ? _moMoService.GetQrImageUrl(purchase.PriceAmount, orderCode)
+            : _sepPayService.GetQrImageUrl(purchase.PriceAmount, orderCode);
+
+        try
+        {
+            var client = _httpClientFactory.CreateClient();
+            client.Timeout = TimeSpan.FromSeconds(8);
+            var bytes = await client.GetByteArrayAsync(qrUrl);
+            return File(bytes, "image/png");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to proxy QR code from {QrUrl}, redirecting instead", qrUrl);
+            return Redirect(qrUrl);
+        }
+    }
+
+    [HttpGet("api/credits/purchases/{purchaseId}/check-sepay")]
+    public async Task<IActionResult> CheckSepPayPayment(int purchaseId)
+    {
+        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var result = await _sepPayService.CheckAndProcessPaymentAsync(purchaseId, userId);
+        return Ok(result);
+    }
+
+    [HttpGet("api/credits/purchases/{purchaseId}/check-momo")]
+    public async Task<IActionResult> CheckMoMoPayment(int purchaseId)
+    {
+        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var result = await _moMoService.CheckAndProcessPaymentAsync(purchaseId, userId);
+        return Ok(result);
+    }
+
+    [HttpPost("api/credits/purchases/{purchaseId}/simulate-momo-success")]
+    public async Task<IActionResult> SimulateMoMoSuccess(int purchaseId)
+    {
+        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var result = await _moMoService.SimulateSuccessAsync(purchaseId, userId);
+        return Ok(result);
+    }
+
+    [HttpPost("api/credits/purchases/momo-ipn")]
+    [AllowAnonymous]
+    public async Task<IActionResult> MoMoIpn([FromBody] MoMoIpnRequest ipn)
+    {
+        _logger.LogInformation("Received MoMo IPN for Order {OrderId}, Amount {Amt}, ResultCode: {Code}",
+            ipn.OrderId, ipn.Amount, ipn.ResultCode);
+
+        var processed = await _moMoService.ProcessIpnAsync(ipn);
+        return Ok(new { success = processed });
+    }
+
+    [HttpPost("api/credits/purchases/sepay-webhook")]
+    [AllowAnonymous]
+    public async Task<IActionResult> SepPayWebhook([FromBody] SepPayTransactionItem tx)
+    {
+        _logger.LogInformation("Received SepPay Webhook for Tx {Id}, Amount {Amt}, Content: {Content}",
+            tx.Id, tx.AmountIn, tx.TransactionContent);
+
+        var processed = await _sepPayService.ProcessIncomingTransactionAsync(tx);
+        return Ok(new { success = processed });
     }
 
     [HttpGet("api/credits/purchases/{purchaseId}")]
@@ -281,7 +439,16 @@ public class CreditsController : ControllerBase
             throw new AppException("Dự án không tồn tại.", "NOT_FOUND", System.Net.HttpStatusCode.NotFound);
         }
 
+        if (project.Status == "Removed")
+        {
+            throw new AppException("Dự án đã bị gỡ bỏ bởi ban quản trị.", "PROJECT_REMOVED");
+        }
+
         var employerId = project.EmployerId;
+        if (employerId == userId)
+        {
+            throw new AppException("Không thể tự mở khóa liên hệ của chính mình.", "CANNOT_UNLOCK_SELF");
+        }
 
         // CONTACT-002 & CONTACT-003: If already unlocked, return details with 0 charge
         var alreadyUnlocked = await _db.ContactUnlocks.AnyAsync(c => c.FreelancerId == userId && c.EmployerId == employerId);
@@ -388,11 +555,12 @@ public class CreditsController : ControllerBase
         }
 
         var isOwner = (project.EmployerId == userId);
-        var isUnlocked = isOwner || role == "Admin" || await _db.ContactUnlocks.AnyAsync(c => c.FreelancerId == userId && c.EmployerId == project.EmployerId);
+        var hasApplied = await _db.Applications.AnyAsync(a => a.ProjectId == projectId && a.FreelancerId == userId);
+        var isUnlocked = isOwner || role == "Admin" || hasApplied;
 
         if (!isUnlocked)
         {
-            throw new AppException("Thông tin liên hệ này chưa được mở khóa. Chi phí mở khóa là 4 credit.", "CONTACT_LOCKED", System.Net.HttpStatusCode.Forbidden);
+            throw new AppException("Bạn cần nộp hồ sơ ứng tuyển (Apply) vào tin này trước để lấy thông tin liên hệ nhà tuyển dụng.", "APPLICATION_REQUIRED", System.Net.HttpStatusCode.Forbidden);
         }
 
         return Ok(new EmployerContactDto

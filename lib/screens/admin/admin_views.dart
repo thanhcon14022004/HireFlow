@@ -18,12 +18,39 @@ class AdminHomeScreen extends StatefulWidget {
 
 class _AdminHomeScreenState extends State<AdminHomeScreen> {
   int _currentIndex = 0;
+  bool _isAutoRunning = false;
+
+  void _onTriggerAutomation() async {
+    setState(() => _isAutoRunning = true);
+    try {
+      final res = await AdminService.triggerAutomation();
+      if (mounted) {
+        final data = res['data'] as Map<String, dynamic>?;
+        final closed = data?['projectsClosed'] ?? 0;
+        final expired = data?['purchasesExpired'] ?? 0;
+        final reconciled = data?['purchasesAutoReconciled'] ?? 0;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Tự động hóa hoàn tất: Đóng $closed dự án, hủy $expired đơn quá hạn, khớp $reconciled GD'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi chạy tự động hóa: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isAutoRunning = false);
+    }
+  }
 
   final List<Widget> _pages = const [
     AdminUsersTab(),
     AdminProjectsTab(),
     AdminReportsTab(),
-    AdminAuditTab(),
   ];
 
   @override
@@ -31,34 +58,62 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     final auth = context.watch<AuthProvider>();
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: Row(
-          children: const [
-            Icon(Icons.admin_panel_settings, color: Colors.amber, size: 26),
-            SizedBox(width: 8),
-            Text('HireFlow Quản Trị Hệ Thống', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          children: [
+            Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFD97706), Color(0xFFF59E0B)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.shield, color: Colors.white, size: 20),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'HireFlow Quản Trị',
+                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Colors.white, letterSpacing: -0.3),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    auth.user?.fullName ?? 'Admin',
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF94A3B8)),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
         actions: [
-          Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              margin: const EdgeInsets.only(right: 8),
-              decoration: BoxDecoration(
-                color: Colors.white.withAlpha(51),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(auth.user?.fullName ?? 'Admin', style: const TextStyle(fontSize: 12, color: Colors.white)),
-            ),
+          IconButton(
+            icon: _isAutoRunning
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFF59E0B)),
+                  )
+                : const Icon(Icons.bolt, color: Color(0xFFF59E0B), size: 24),
+            tooltip: 'Chạy tác vụ tự động hóa ngay',
+            onPressed: _isAutoRunning ? null : _onTriggerAutomation,
           ),
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout, size: 22),
             tooltip: 'Đăng xuất',
             onPressed: () => auth.logout(),
           ),
         ],
-        backgroundColor: const Color(0xFF1E293B),
+        backgroundColor: const Color(0xFF0F172A),
         foregroundColor: Colors.white,
       ),
       body: _pages[_currentIndex],
@@ -66,10 +121,9 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         selectedIndex: _currentIndex,
         onDestinationSelected: (idx) => setState(() => _currentIndex = idx),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.manage_accounts), label: 'Tài khoản'),
-          NavigationDestination(icon: Icon(Icons.rule), label: 'Kiểm duyệt'),
-          NavigationDestination(icon: Icon(Icons.report_problem_outlined), label: 'Báo cáo'),
-          NavigationDestination(icon: Icon(Icons.receipt_long), label: 'Nhật ký audit'),
+          NavigationDestination(icon: Icon(Icons.manage_accounts_outlined), label: 'Tài khoản'),
+          NavigationDestination(icon: Icon(Icons.rule_folder_outlined), label: 'Kiểm duyệt'),
+          NavigationDestination(icon: Icon(Icons.report_problem_outlined), label: 'Báo cáo vi phạm'),
         ],
       ),
     );
@@ -106,20 +160,42 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
 
   void _toggleUser(UserModel user) async {
     final nextStatus = !user.isActive;
-    try {
-      await AdminService.updateUserStatus(user.userId, nextStatus);
-      _fetch();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Đã ${nextStatus ? "mở khóa" : "khóa"} tài khoản ${user.fullName}'),
-            backgroundColor: nextStatus ? AppColors.success : AppColors.error,
+    final actionName = nextStatus ? "Mở khóa tài khoản" : "Khóa tài khoản";
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(actionName),
+        content: Text(
+          'Bạn có chắc muốn ${nextStatus ? "kích hoạt lại" : "tạm ngưng"} tài khoản của ${user.fullName} (${user.email})?',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hủy')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: nextStatus ? AppColors.success : AppColors.error),
+            child: Text(actionName),
           ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: AppColors.error));
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      try {
+        await AdminService.updateUserStatus(user.userId, nextStatus);
+        _fetch();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Đã ${nextStatus ? "mở khóa" : "khóa"} tài khoản ${user.fullName} thành công.'),
+              backgroundColor: nextStatus ? AppColors.success : AppColors.error,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: AppColors.error));
+        }
       }
     }
   }
@@ -128,6 +204,7 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        // Search & Filter header
         Container(
           color: Colors.white,
           padding: const EdgeInsets.all(16),
@@ -138,9 +215,17 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
                   controller: _searchCtrl,
                   decoration: InputDecoration(
                     hintText: 'Tìm theo tên, email...',
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    prefixIcon: const Icon(Icons.search, size: 20),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    suffixIcon: _searchCtrl.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: () {
+                              _searchCtrl.clear();
+                              _fetch();
+                            },
+                          )
+                        : null,
                   ),
                   onSubmitted: (_) => _fetch(),
                 ),
@@ -149,6 +234,7 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
               DropdownButton<String?>(
                 value: _selectedRole,
                 hint: const Text('Tất cả vai trò'),
+                underline: const SizedBox(),
                 items: const [
                   DropdownMenuItem(value: null, child: Text('Tất cả')),
                   DropdownMenuItem(value: 'Freelancer', child: Text('Freelancer')),
@@ -162,6 +248,7 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
             ],
           ),
         ),
+
         Expanded(
           child: _isLoading
               ? const Center(child: CircularProgressIndicator())
@@ -174,22 +261,54 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
                       itemBuilder: (context, index) {
                         final u = _users[index];
                         return Card(
-                          elevation: 1,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: u.isActive ? AppColors.primaryLight : const Color(0xFFFDE8E8),
-                              child: Icon(
-                                u.isFreelancer ? Icons.person : (u.isEmployer ? Icons.business : Icons.security),
-                                color: u.isActive ? AppColors.primary : Colors.red,
-                              ),
-                            ),
-                            title: Text(u.fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                            subtitle: Text('${u.email} • ${u.role} • Ví: ${u.creditBalance} cr', style: const TextStyle(fontSize: 12)),
-                            trailing: Switch(
-                              value: u.isActive,
-                              activeThumbColor: AppColors.success,
-                              onChanged: u.isAdmin ? null : (_) => _toggleUser(u),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: const BorderSide(color: AppColors.border),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 22,
+                                  backgroundColor: u.isActive ? AppColors.primaryLight : const Color(0xFFFEE2E2),
+                                  child: Icon(
+                                    u.isFreelancer ? Icons.person : (u.isEmployer ? Icons.business : Icons.security),
+                                    color: u.isActive ? AppColors.primary : Colors.red,
+                                    size: 22,
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Text(u.fullName, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.surfaceSecondary,
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: Text(u.role, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 3),
+                                      Text('${u.email} • Ví: ${u.creditBalance} cr', style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
+                                    ],
+                                  ),
+                                ),
+                                Switch(
+                                  value: u.isActive,
+                                  activeThumbColor: AppColors.success,
+                                  onChanged: u.isAdmin ? null : (_) => _toggleUser(u),
+                                ),
+                              ],
                             ),
                           ),
                         );
@@ -211,6 +330,7 @@ class AdminProjectsTab extends StatefulWidget {
 class _AdminProjectsTabState extends State<AdminProjectsTab> {
   List<ProjectModel> _projects = [];
   bool _isLoading = true;
+  String? _statusFilter;
 
   @override
   void initState() {
@@ -221,7 +341,7 @@ class _AdminProjectsTabState extends State<AdminProjectsTab> {
   void _fetch() async {
     setState(() => _isLoading = true);
     try {
-      final list = await AdminService.getAdminProjects();
+      final list = await AdminService.getAdminProjects(status: _statusFilter);
       if (mounted) setState(() => _projects = list);
     } catch (_) {}
     if (mounted) setState(() => _isLoading = false);
@@ -245,65 +365,120 @@ class _AdminProjectsTabState extends State<AdminProjectsTab> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
-
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: _projects.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final p = _projects[index];
-        return Card(
-          elevation: 1,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      children: [
+        // Status filters
+        Container(
+          color: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(p.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    ),
-                    StatusBadge(status: p.status),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text('Đăng bởi: ${p.companyName ?? p.employerName} (ID: ${p.employerId})', style: const TextStyle(fontSize: 13, color: AppColors.primary)),
-                const SizedBox(height: 8),
-                Text(p.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                const SizedBox(height: 12),
-                const Divider(),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    if (p.status != 'Open')
-                      TextButton.icon(
-                        icon: const Icon(Icons.check, size: 16, color: Colors.green),
-                        label: const Text('Công khai (Open)', style: TextStyle(color: Colors.green)),
-                        onPressed: () => _moderate(p.projectId, 'Open'),
-                      ),
-                    if (p.status != 'Hidden')
-                      TextButton.icon(
-                        icon: const Icon(Icons.visibility_off, size: 16, color: Colors.orange),
-                        label: const Text('Tạm ẩn (Hidden)', style: TextStyle(color: Colors.orange)),
-                        onPressed: () => _moderate(p.projectId, 'Hidden'),
-                      ),
-                    if (p.status != 'Removed')
-                      TextButton.icon(
-                        icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
-                        label: const Text('Gỡ bỏ (Removed)', style: TextStyle(color: Colors.red)),
-                        onPressed: () => _moderate(p.projectId, 'Removed'),
-                      ),
-                  ],
-                ),
+                _buildFilterChip('Tất cả', null),
+                _buildFilterChip('Công khai (Open)', 'Open'),
+                _buildFilterChip('Tạm ẩn (Hidden)', 'Hidden'),
+                _buildFilterChip('Đã gỡ (Removed)', 'Removed'),
               ],
             ),
           ),
-        );
-      },
+        ),
+
+        Expanded(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _projects.isEmpty
+                  ? const EmptyStateWidget(icon: Icons.assignment_outlined, title: 'Không có dự án nào')
+                  : ListView.separated(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _projects.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final p = _projects[index];
+                        return Card(
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: const BorderSide(color: AppColors.border),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(18),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(p.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                                    ),
+                                    StatusBadge(status: p.status, isSmall: true),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Đăng bởi: ${p.companyName ?? p.employerName} (ID: ${p.employerId}) • Ứng viên: ${p.applicantCount}',
+                                  style: const TextStyle(fontSize: 12.5, color: AppColors.primary, fontWeight: FontWeight.w600),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(p.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
+                                const SizedBox(height: 14),
+                                const Divider(height: 1, color: AppColors.border),
+                                const SizedBox(height: 10),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    if (p.status != 'Open')
+                                      TextButton.icon(
+                                        icon: const Icon(Icons.check_circle_outline, size: 16, color: Colors.green),
+                                        label: const Text('Công khai', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                                        onPressed: () => _moderate(p.projectId, 'Open'),
+                                      ),
+                                    if (p.status != 'Hidden')
+                                      TextButton.icon(
+                                        icon: const Icon(Icons.visibility_off_outlined, size: 16, color: Colors.orange),
+                                        label: const Text('Tạm ẩn', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
+                                        onPressed: () => _moderate(p.projectId, 'Hidden'),
+                                      ),
+                                    if (p.status != 'Removed')
+                                      TextButton.icon(
+                                        icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
+                                        label: const Text('Gỡ bỏ', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                                        onPressed: () => _moderate(p.projectId, 'Removed'),
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFilterChip(String label, String? status) {
+    final isSelected = _statusFilter == status;
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: FilterChip(
+        label: Text(label),
+        selected: isSelected,
+        onSelected: (_) {
+          setState(() => _statusFilter = status);
+          _fetch();
+        },
+        labelStyle: TextStyle(
+          fontSize: 12,
+          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+          color: isSelected ? AppColors.primary : AppColors.textSecondary,
+        ),
+        selectedColor: AppColors.primaryLight,
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: AppColors.border)),
+      ),
     );
   }
 }
@@ -356,9 +531,9 @@ class _AdminReportsTabState extends State<AdminReportsTab> {
 
     if (_reports.isEmpty) {
       return const EmptyStateWidget(
-        icon: Icons.verified_user,
+        icon: Icons.verified_user_outlined,
         title: 'Không có báo cáo vi phạm nào',
-        subtitle: 'Hệ thống hiện tại đang an toàn và tuân thủ chuẩn mực.',
+        subtitle: 'Hệ thống hiện tại đang tuân thủ an toàn & minh bạch.',
       );
     }
 
@@ -369,36 +544,40 @@ class _AdminReportsTabState extends State<AdminReportsTab> {
       itemBuilder: (context, index) {
         final r = _reports[index];
         return Card(
-          elevation: 1,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: AppColors.border),
+          ),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Báo cáo ${r.targetType} #${r.targetId}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                    StatusBadge(status: r.status),
+                    Text('Báo cáo ${r.targetType} #${r.targetId}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                    StatusBadge(status: r.status, isSmall: true),
                   ],
                 ),
                 const SizedBox(height: 6),
-                Text('Người báo cáo: ${r.reporterName} (ID: ${r.reporterUserId})', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                Text('Người gửi: ${r.reporterName} (ID: ${r.reporterUserId})', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                 const SizedBox(height: 8),
-                Text('Lý do: ${r.reason}', style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.error, fontSize: 13)),
+                Text('Lý do: ${r.reason}', style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.error, fontSize: 13.5)),
                 if (r.description != null && r.description!.isNotEmpty) ...[
                   const SizedBox(height: 4),
-                  Text('Chi tiết: ${r.description!}', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                  Text('Chi tiết: ${r.description!}', style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
                 ],
-                const SizedBox(height: 12),
-                const Divider(),
+                const SizedBox(height: 14),
+                const Divider(height: 1, color: AppColors.border),
+                const SizedBox(height: 10),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(onPressed: () => _updateStatus(r.reportId, 'Reviewing'), child: const Text('Đang xử lý')),
                     const SizedBox(width: 8),
-                    TextButton(onPressed: () => _updateStatus(r.reportId, 'Resolved'), child: const Text('Giải quyết', style: TextStyle(color: Colors.green))),
+                    TextButton(onPressed: () => _updateStatus(r.reportId, 'Resolved'), child: const Text('Giải quyết', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold))),
                     const SizedBox(width: 8),
                     TextButton(onPressed: () => _updateStatus(r.reportId, 'Rejected'), child: const Text('Bác bỏ', style: TextStyle(color: Colors.grey))),
                   ],
@@ -420,7 +599,9 @@ class AdminAuditTab extends StatefulWidget {
 }
 
 class _AdminAuditTabState extends State<AdminAuditTab> {
+  int _selectedSubTab = 0; // 0 = Audit Logs, 1 = Credit Transactions
   List<AuditLogModel> _logs = [];
+  List<CreditTransactionModel> _txs = [];
   bool _isLoading = true;
 
   @override
@@ -432,21 +613,66 @@ class _AdminAuditTabState extends State<AdminAuditTab> {
   void _fetch() async {
     setState(() => _isLoading = true);
     try {
-      final list = await AdminService.getAuditLogs();
-      if (mounted) setState(() => _logs = list);
+      if (_selectedSubTab == 0) {
+        final list = await AdminService.getAuditLogs();
+        if (mounted) setState(() => _logs = list);
+      } else {
+        final list = await AdminService.getCreditTransactions();
+        if (mounted) setState(() => _txs = list);
+      }
     } catch (_) {}
     if (mounted) setState(() => _isLoading = false);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    return Column(
+      children: [
+        // Sub-tabs
+        Container(
+          color: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: ChoiceChip(
+                  label: const Center(child: Text('Nhật ký sự kiện (Audit)')),
+                  selected: _selectedSubTab == 0,
+                  onSelected: (_) {
+                    setState(() => _selectedSubTab = 0);
+                    _fetch();
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ChoiceChip(
+                  label: const Center(child: Text('Giao dịch tín dụng toàn sàn')),
+                  selected: _selectedSubTab == 1,
+                  onSelected: (_) {
+                    setState(() => _selectedSubTab = 1);
+                    _fetch();
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
 
+        Expanded(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _selectedSubTab == 0
+                  ? _buildAuditLogsList()
+                  : _buildCreditTransactionsList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAuditLogsList() {
     if (_logs.isEmpty) {
-      return const EmptyStateWidget(
-        icon: Icons.history,
-        title: 'Chưa có nhật ký audit nào',
-      );
+      return const EmptyStateWidget(icon: Icons.history, title: 'Chưa có nhật ký audit nào');
     }
 
     return ListView.separated(
@@ -456,17 +682,67 @@ class _AdminAuditTabState extends State<AdminAuditTab> {
       itemBuilder: (context, index) {
         final log = _logs[index];
         return Card(
-          elevation: 0.5,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: const BorderSide(color: AppColors.border),
+          ),
           child: ListTile(
             leading: const CircleAvatar(
               backgroundColor: Color(0xFFF1F5F9),
               child: Icon(Icons.shield_outlined, size: 20, color: Color(0xFF475569)),
             ),
-            title: Text(log.action, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            title: Text(log.action, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5)),
             subtitle: Text(
               '${log.actorUserName ?? "Hệ thống"} • ${log.details ?? ""}\n${CurrencyFormatter.formatDate(log.createdAt)}',
               style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCreditTransactionsList() {
+    if (_txs.isEmpty) {
+      return const EmptyStateWidget(icon: Icons.receipt_long, title: 'Chưa có giao dịch credit nào');
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: _txs.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      itemBuilder: (context, index) {
+        final tx = _txs[index];
+        final isPositive = tx.amount > 0;
+
+        return Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: const BorderSide(color: AppColors.border),
+          ),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: isPositive ? const Color(0xFFDEF7EC) : const Color(0xFFFEE2E2),
+              child: Icon(
+                isPositive ? Icons.arrow_downward : Icons.arrow_upward,
+                color: isPositive ? const Color(0xFF03543F) : const Color(0xFF991B1B),
+                size: 18,
+              ),
+            ),
+            title: Text(tx.description, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5)),
+            subtitle: Text(
+              '${tx.transactionType} • ${CurrencyFormatter.formatDate(tx.createdAt)}',
+              style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+            ),
+            trailing: Text(
+              isPositive ? '+${tx.amount} cr' : '${tx.amount} cr',
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 15,
+                color: isPositive ? const Color(0xFF047857) : const Color(0xFFDC2626),
+              ),
             ),
           ),
         );

@@ -184,5 +184,21 @@ class ApiService {
       throw ApiException('Tải lên tệp không thành công: ${e.toString()}');
     }
   }
+
+  static Future<Uint8List> getBytes(String endpoint) async {
+    try {
+      final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+      final headers = await _getHeaders();
+      final response = await http.get(uri, headers: headers);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return response.bodyBytes;
+      }
+      throw ApiException('Tải tệp tin thất bại (${response.statusCode})', statusCode: response.statusCode);
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      debugPrint('API GET BYTES Error: $e');
+      throw ApiException('Không thể tải tệp tin từ máy chủ.');
+    }
+  }
 }
 

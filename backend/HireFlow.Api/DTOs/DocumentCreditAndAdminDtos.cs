@@ -41,8 +41,11 @@ public class CreditPackageDto
 
 public class CreatePurchaseRequest
 {
-    [Required(ErrorMessage = "Vui lòng chọn gói credit")]
-    public int CreditPackageId { get; set; }
+    public int? CreditPackageId { get; set; }
+
+    public int? CustomCredits { get; set; }
+
+    public string PaymentProvider { get; set; } = "SepPay"; // "SepPay" or "MoMo"
 }
 
 public class CreditPurchaseDto
@@ -57,8 +60,54 @@ public class CreditPurchaseDto
     public string? ProviderReference { get; set; }
     public string Status { get; set; } = string.Empty;
     public string? PaymentUrl { get; set; }
+    public string? OrderCode { get; set; }
+    public string? BankBrandName { get; set; }
+    public string? AccountNumber { get; set; }
+    public string? AccountHolder { get; set; }
+    public string? QrImageUrl { get; set; }
+    public string? Deeplink { get; set; }
+    public string? MoMoPhoneNumber { get; set; }
+    public DateTime? ExpiresAt { get; set; }
+    public int RemainingSeconds { get; set; } = 120;
     public DateTime CreatedAt { get; set; }
     public DateTime? PaidAt { get; set; }
+}
+
+public class SepPayCheckResultDto
+{
+    public bool Success { get; set; }
+    public string Status { get; set; } = "Pending";
+    public int? CreditsAdded { get; set; }
+    public int? NewBalance { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public int RemainingSeconds { get; set; }
+}
+
+public class MoMoCheckResultDto
+{
+    public bool Success { get; set; }
+    public string Status { get; set; } = "Pending";
+    public int? CreditsAdded { get; set; }
+    public int? NewBalance { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public int RemainingSeconds { get; set; }
+}
+
+public class MoMoIpnRequest
+{
+    public string? PartnerCode { get; set; }
+    public string? OrderId { get; set; }
+    public string? RequestId { get; set; }
+    public long Amount { get; set; }
+    public string? OrderInfo { get; set; }
+    public string? OrderType { get; set; }
+    public long TransId { get; set; }
+    public int ResultCode { get; set; }
+    public string? Message { get; set; }
+    public string? PayType { get; set; }
+    public long ResponseTime { get; set; }
+    public string? ExtraData { get; set; }
+    public string? Signature { get; set; }
 }
 
 public class EmployerContactDto

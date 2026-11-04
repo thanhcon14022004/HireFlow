@@ -29,10 +29,38 @@ public class ReportsController : ControllerBase
     {
         var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
+        var validTargets = new[] { "Project", "User", "Application" };
+        var normalizedTarget = validTargets.FirstOrDefault(t => string.Equals(t, request.TargetType?.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (normalizedTarget == null)
+        {
+            throw new AppException("Loại đối tượng báo cáo không hợp lệ. Chỉ chấp nhận: Project, User, Application.", "INVALID_TARGET_TYPE");
+        }
+
+        // Verify that target exists
+        switch (normalizedTarget)
+        {
+            case "Project":
+                var projectExists = await _db.Projects.AnyAsync(p => p.ProjectId == request.TargetId);
+                if (!projectExists) throw new AppException("Dự án được báo cáo không tồn tại.", "NOT_FOUND", System.Net.HttpStatusCode.NotFound);
+                break;
+            case "User":
+                if (request.TargetId == userId)
+                {
+                    throw new AppException("Bạn không thể tự gửi báo cáo về tài khoản của chính mình.", "CANNOT_REPORT_SELF");
+                }
+                var userExists = await _db.Users.AnyAsync(u => u.UserId == request.TargetId);
+                if (!userExists) throw new AppException("Người dùng được báo cáo không tồn tại.", "NOT_FOUND", System.Net.HttpStatusCode.NotFound);
+                break;
+            case "Application":
+                var appExists = await _db.Applications.AnyAsync(a => a.ApplicationId == request.TargetId);
+                if (!appExists) throw new AppException("Hồ sơ ứng tuyển được báo cáo không tồn tại.", "NOT_FOUND", System.Net.HttpStatusCode.NotFound);
+                break;
+        }
+
         var report = new Report
         {
             ReporterUserId = userId,
-            TargetType = request.TargetType,
+            TargetType = normalizedTarget,
             TargetId = request.TargetId,
             Reason = request.Reason.Trim(),
             Description = request.Description?.Trim(),
@@ -56,13 +84,30 @@ public class AdminController : ControllerBase
 {
     private readonly HireFlowDbContext _db;
     private readonly IAuditService _audit;
+    private readonly IHireFlowAutomationService _automation;
     private readonly ILogger<AdminController> _logger;
 
-    public AdminController(HireFlowDbContext db, IAuditService audit, ILogger<AdminController> logger)
+    public AdminController(
+        HireFlowDbContext db,
+        IAuditService audit,
+        IHireFlowAutomationService automation,
+        ILogger<AdminController> logger)
     {
         _db = db;
         _audit = audit;
+        _automation = automation;
         _logger = logger;
+    }
+
+    [HttpPost("automation/trigger")]
+    public async Task<IActionResult> TriggerAutomation()
+    {
+        var result = await _automation.RunAutomationCycleAsync();
+        return Ok(new
+        {
+            message = "Chu kỳ tự động hóa hệ thống đã thực thi thành công.",
+            data = result
+        });
     }
 
     [HttpGet("users")]

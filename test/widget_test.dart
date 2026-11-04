@@ -12,7 +12,8 @@ void main() {
       ),
     );
 
-    expect(find.text('25 credit'), findsOneWidget);
+    expect(find.text('25'), findsOneWidget);
+    expect(find.text('cr'), findsOneWidget);
     expect(find.byIcon(Icons.monetization_on), findsOneWidget);
   });
 
@@ -32,7 +33,7 @@ void main() {
     );
 
     expect(find.text('Đang nhận hồ sơ'), findsOneWidget);
-    expect(find.text('Chờ duyệt'), findsOneWidget);
-    expect(find.text('Được nhận'), findsOneWidget);
+    expect(find.text('Chờ xem xét'), findsOneWidget);
+    expect(find.text('Trúng tuyển'), findsOneWidget);
   });
 }

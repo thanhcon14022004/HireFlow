@@ -22,3 +22,14 @@ public class PagedResult<T>
     public int TotalPages => (int)Math.Ceiling((double)TotalCount / (PageSize > 0 ? PageSize : 10));
 }
 
+public class UserNotificationDto
+{
+    public int NotificationId { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+    public string Type { get; set; } = "ApplicationStatus";
+    public int? ReferenceId { get; set; }
+    public bool IsRead { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+

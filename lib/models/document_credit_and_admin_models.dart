@@ -204,3 +204,108 @@ class AuditLogModel {
   }
 }
 
+class CreditPurchaseModel {
+  final int creditPurchaseId;
+  final int creditPackageId;
+  final String packageName;
+  final int creditsPurchased;
+  final double priceAmount;
+  final String currencyCode;
+  final String paymentProvider;
+  final String? providerReference;
+  final String? orderCode;
+  final String? bankBrandName;
+  final String? accountNumber;
+  final String? accountHolder;
+  final String? qrImageUrl;
+  final String? deeplink;
+  final String? momoPhoneNumber;
+  final String status;
+  final String? paymentUrl;
+  final DateTime createdAt;
+  final DateTime? expiresAt;
+  final int remainingSeconds;
+  final DateTime? paidAt;
+
+  CreditPurchaseModel({
+    required this.creditPurchaseId,
+    required this.creditPackageId,
+    required this.packageName,
+    required this.creditsPurchased,
+    required this.priceAmount,
+    required this.currencyCode,
+    required this.paymentProvider,
+    this.providerReference,
+    this.orderCode,
+    this.bankBrandName,
+    this.accountNumber,
+    this.accountHolder,
+    this.qrImageUrl,
+    this.deeplink,
+    this.momoPhoneNumber,
+    required this.status,
+    this.paymentUrl,
+    required this.createdAt,
+    this.expiresAt,
+    this.remainingSeconds = 120,
+    this.paidAt,
+  });
+
+  factory CreditPurchaseModel.fromJson(Map<String, dynamic> json) {
+    return CreditPurchaseModel(
+      creditPurchaseId: json['creditPurchaseId'] ?? 0,
+      creditPackageId: json['creditPackageId'] ?? 0,
+      packageName: json['packageName'] ?? '',
+      creditsPurchased: json['creditsPurchased'] ?? 0,
+      priceAmount: json['priceAmount'] != null ? (json['priceAmount'] as num).toDouble() : 0.0,
+      currencyCode: json['currencyCode'] ?? 'VND',
+      paymentProvider: json['paymentProvider'] ?? 'SepPay',
+      providerReference: json['providerReference'],
+      orderCode: json['orderCode'] ?? json['providerReference'],
+      bankBrandName: json['bankBrandName'] ?? 'ACB',
+      accountNumber: json['accountNumber'] ?? '27655931',
+      accountHolder: json['accountHolder'] ?? 'HA TRUNG THANH',
+      qrImageUrl: json['qrImageUrl'] ?? json['paymentUrl'],
+      deeplink: json['deeplink'],
+      momoPhoneNumber: json['moMoPhoneNumber'] ?? json['momoPhoneNumber'],
+      status: json['status'] ?? 'Pending',
+      paymentUrl: json['paymentUrl'],
+      createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ?? DateTime.now(),
+      expiresAt: json['expiresAt'] != null ? DateTime.tryParse(json['expiresAt'].toString()) : null,
+      remainingSeconds: json['remainingSeconds'] ?? 120,
+      paidAt: json['paidAt'] != null ? DateTime.tryParse(json['paidAt'].toString()) : null,
+    );
+  }
+
+  bool get isMoMo => paymentProvider.toLowerCase() == 'momo';
+}
+
+class SepPayCheckResultModel {
+  final bool success;
+  final String status;
+  final int? creditsAdded;
+  final int? newBalance;
+  final String message;
+  final int remainingSeconds;
+
+  SepPayCheckResultModel({
+    required this.success,
+    required this.status,
+    this.creditsAdded,
+    this.newBalance,
+    required this.message,
+    required this.remainingSeconds,
+  });
+
+  factory SepPayCheckResultModel.fromJson(Map<String, dynamic> json) {
+    return SepPayCheckResultModel(
+      success: json['success'] == true,
+      status: json['status'] ?? 'Pending',
+      creditsAdded: json['creditsAdded'],
+      newBalance: json['newBalance'],
+      message: json['message'] ?? '',
+      remainingSeconds: json['remainingSeconds'] ?? 0,
+    );
+  }
+}
+

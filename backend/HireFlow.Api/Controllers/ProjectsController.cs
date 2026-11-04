@@ -176,10 +176,7 @@ public class ProjectsController : ControllerBase
             }
             else
             {
-                // Check if unlocked contact
-                isUnlocked = await _db.ContactUnlocks.AnyAsync(c => c.FreelancerId == currentUserId && c.EmployerId == project.EmployerId);
-
-                // Check if applied
+                // Check if candidate applied to this project
                 var app = await _db.Applications.FirstOrDefaultAsync(a => a.ProjectId == projectId && a.FreelancerId == currentUserId);
                 if (app != null)
                 {
@@ -187,6 +184,9 @@ public class ProjectsController : ControllerBase
                     myApplicationId = app.ApplicationId;
                     myApplicationStatus = app.Status;
                 }
+
+                // Rule: Candidate must apply to project to unlock employer contact details
+                isUnlocked = hasApplied;
             }
         }
 
@@ -228,6 +228,26 @@ public class ProjectsController : ControllerBase
     public async Task<IActionResult> CreateProject([FromBody] CreateProjectRequest request)
     {
         var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+        // Budget validation
+        if (request.BudgetMin.HasValue && request.BudgetMin.Value < 0)
+        {
+            throw new AppException("Ngân sách tối thiểu không được là số âm.", "INVALID_BUDGET");
+        }
+        if (request.BudgetMax.HasValue && request.BudgetMax.Value < 0)
+        {
+            throw new AppException("Ngân sách tối đa không được là số âm.", "INVALID_BUDGET");
+        }
+        if (request.BudgetMin.HasValue && request.BudgetMax.HasValue && request.BudgetMin.Value > request.BudgetMax.Value)
+        {
+            throw new AppException("Ngân sách tối thiểu không được lớn hơn ngân sách tối đa.", "INVALID_BUDGET");
+        }
+
+        // Deadline validation
+        if (request.Deadline.HasValue && request.Deadline.Value <= DateTime.UtcNow)
+        {
+            throw new AppException("Hạn chót nộp hồ sơ phải ở tương lai.", "INVALID_DEADLINE");
+        }
 
         // PUB-002 & PUB-003: Check credits (5 credits) and execute atomically
         var cost = CreditConstants.PublishProjectCost;
@@ -317,6 +337,32 @@ public class ProjectsController : ControllerBase
             throw new AppException("Bạn không có quyền chỉnh sửa dự án này.", "FORBIDDEN", System.Net.HttpStatusCode.Forbidden);
         }
 
+        // Check if project can be updated
+        if (project.Status == "Closed" || project.Status == "Removed")
+        {
+            throw new AppException("Không thể chỉnh sửa dự án đã đóng hoặc bị gỡ bỏ.", "PROJECT_NOT_EDITABLE");
+        }
+
+        // Budget validation
+        if (request.BudgetMin.HasValue && request.BudgetMin.Value < 0)
+        {
+            throw new AppException("Ngân sách tối thiểu không được là số âm.", "INVALID_BUDGET");
+        }
+        if (request.BudgetMax.HasValue && request.BudgetMax.Value < 0)
+        {
+            throw new AppException("Ngân sách tối đa không được là số âm.", "INVALID_BUDGET");
+        }
+        if (request.BudgetMin.HasValue && request.BudgetMax.HasValue && request.BudgetMin.Value > request.BudgetMax.Value)
+        {
+            throw new AppException("Ngân sách tối thiểu không được lớn hơn ngân sách tối đa.", "INVALID_BUDGET");
+        }
+
+        // Deadline validation
+        if (request.Deadline.HasValue && request.Deadline.Value <= DateTime.UtcNow)
+        {
+            throw new AppException("Hạn chót nộp hồ sơ phải ở tương lai.", "INVALID_DEADLINE");
+        }
+
         project.Title = request.Title.Trim();
         project.Description = request.Description.Trim();
         project.BudgetMin = request.BudgetMin;
@@ -361,6 +407,16 @@ public class ProjectsController : ControllerBase
         if (project.EmployerId != userId)
         {
             throw new AppException("Bạn không có quyền đóng dự án này.", "FORBIDDEN", System.Net.HttpStatusCode.Forbidden);
+        }
+
+        if (project.Status == "Closed")
+        {
+            return Ok(new { message = "Dự án đã đóng trước đó." });
+        }
+
+        if (project.Status == "Removed")
+        {
+            throw new AppException("Dự án đã bị gỡ bỏ bởi quản trị viên.", "PROJECT_REMOVED");
         }
 
         project.Status = "Closed";

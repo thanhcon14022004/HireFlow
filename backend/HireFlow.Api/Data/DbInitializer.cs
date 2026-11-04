@@ -10,42 +10,95 @@ public static class DbInitializer
     {
         try
         {
-            // Seed CreditPackages
+            // Ensure UserNotifications table exists
+            try
+            {
+                await db.Database.ExecuteSqlRawAsync(@"
+                    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='UserNotifications' and xtype='U')
+                    BEGIN
+                        CREATE TABLE UserNotifications (
+                            NotificationId INT IDENTITY(1,1) PRIMARY KEY,
+                            UserId INT NOT NULL,
+                            Title NVARCHAR(200) NOT NULL,
+                            Message NVARCHAR(MAX) NOT NULL,
+                            Type NVARCHAR(50) NOT NULL,
+                            ReferenceId INT NULL,
+                            IsRead BIT NOT NULL DEFAULT 0,
+                            CreatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+                            CONSTRAINT FK_UserNotifications_Users_UserId FOREIGN KEY (UserId) REFERENCES Users (UserId) ON DELETE CASCADE
+                        );
+                    END
+                ");
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning("UserNotifications table check/creation skipped: {Message}", ex.Message);
+            }
+
+            // Seed CreditPackages (Rate: 5,000 VND / 1 Credit)
             if (!await db.CreditPackages.AnyAsync())
             {
                 var packages = new List<CreditPackage>
                 {
                     new()
                     {
-                        Name = "Gói Khởi Đầu",
-                        CreditAmount = 10,
-                        PriceAmount = 50000,
+                        Name = "Gói Tiết Kiệm (5 Credits)",
+                        CreditAmount = 5,
+                        PriceAmount = 25000,
                         CurrencyCode = "VND",
                         IsActive = true,
                         DisplayOrder = 1
                     },
                     new()
                     {
-                        Name = "Gói Tiêu Chuẩn (Tiết kiệm 20%)",
-                        CreditAmount = 50,
-                        PriceAmount = 200000,
+                        Name = "Gói Khởi Đầu (10 Credits)",
+                        CreditAmount = 10,
+                        PriceAmount = 50000,
                         CurrencyCode = "VND",
                         IsActive = true,
                         DisplayOrder = 2
                     },
                     new()
                     {
-                        Name = "Gói Doanh Nghiệp (Tiết kiệm 33%)",
-                        CreditAmount = 150,
-                        PriceAmount = 500000,
+                        Name = "Gói Tiêu Chuẩn (20 Credits)",
+                        CreditAmount = 20,
+                        PriceAmount = 100000,
                         CurrencyCode = "VND",
                         IsActive = true,
                         DisplayOrder = 3
+                    },
+                    new()
+                    {
+                        Name = "Gói Nâng Cao (50 Credits)",
+                        CreditAmount = 50,
+                        PriceAmount = 250000,
+                        CurrencyCode = "VND",
+                        IsActive = true,
+                        DisplayOrder = 4
+                    },
+                    new()
+                    {
+                        Name = "Gói Doanh Nghiệp (100 Credits)",
+                        CreditAmount = 100,
+                        PriceAmount = 500000,
+                        CurrencyCode = "VND",
+                        IsActive = true,
+                        DisplayOrder = 5
                     }
                 };
                 await db.CreditPackages.AddRangeAsync(packages);
                 await db.SaveChangesAsync();
-                logger.LogInformation("Seeded default Credit Packages.");
+                logger.LogInformation("Seeded default Credit Packages at 5k/credit.");
+            }
+            else
+            {
+                // Synchronize existing packages to 5,000 VND per 1 credit
+                var existingPackages = await db.CreditPackages.ToListAsync();
+                foreach (var p in existingPackages)
+                {
+                    p.PriceAmount = p.CreditAmount * 5000m;
+                }
+                await db.SaveChangesAsync();
             }
 
             // Seed Admin User (AUTH-006: Admin cannot register publicly)

@@ -293,6 +293,10 @@ class DocumentService {
   static Future<void> deleteCv(int documentId) async {
     await ApiService.delete(ApiConstants.deleteDocument(documentId));
   }
+
+  static Future<List<int>> downloadCv(int documentId) async {
+    return await ApiService.getBytes(ApiConstants.downloadDocument(documentId));
+  }
 }
 
 class CreditService {
@@ -313,10 +317,36 @@ class CreditService {
     return items.map((p) => CreditPackageModel.fromJson(p)).toList();
   }
 
-  static Future<Map<String, dynamic>> createPurchase(int packageId) async {
-    final res = await ApiService.post(ApiConstants.createPurchase, body: {
-      'creditPackageId': packageId,
-    });
+  static Future<CreditPurchaseModel> createPurchase({
+    int? packageId,
+    int? customCredits,
+    String paymentProvider = 'SepPay',
+  }) async {
+    final body = <String, dynamic>{
+      'paymentProvider': paymentProvider,
+    };
+    if (packageId != null && packageId > 0) {
+      body['creditPackageId'] = packageId;
+    }
+    if (customCredits != null && customCredits > 0) {
+      body['customCredits'] = customCredits;
+    }
+    final res = await ApiService.post(ApiConstants.createPurchase, body: body);
+    return CreditPurchaseModel.fromJson(Map<String, dynamic>.from(res));
+  }
+
+  static Future<SepPayCheckResultModel> checkSepPayPayment(int purchaseId) async {
+    final res = await ApiService.get(ApiConstants.checkSepPayPayment(purchaseId));
+    return SepPayCheckResultModel.fromJson(Map<String, dynamic>.from(res));
+  }
+
+  static Future<SepPayCheckResultModel> checkMoMoPayment(int purchaseId) async {
+    final res = await ApiService.get(ApiConstants.checkMoMoPayment(purchaseId));
+    return SepPayCheckResultModel.fromJson(Map<String, dynamic>.from(res));
+  }
+
+  static Future<Map<String, dynamic>> simulateMoMoPaymentSuccess(int purchaseId) async {
+    final res = await ApiService.post(ApiConstants.simulateMoMoPurchase(purchaseId));
     return Map<String, dynamic>.from(res);
   }
 
@@ -406,6 +436,20 @@ class AdminService {
     });
     final items = res['items'] as List<dynamic>? ?? [];
     return items.map((a) => AuditLogModel.fromJson(a)).toList();
+  }
+
+  static Future<List<CreditTransactionModel>> getCreditTransactions({int page = 1}) async {
+    final res = await ApiService.get(ApiConstants.adminCreditTransactions, queryParams: {
+      'page': page.toString(),
+      'pageSize': '25',
+    });
+    final items = res['items'] as List<dynamic>? ?? [];
+    return items.map((t) => CreditTransactionModel.fromJson(t)).toList();
+  }
+
+  static Future<Map<String, dynamic>> triggerAutomation() async {
+    final res = await ApiService.post('/api/admin/automation/trigger');
+    return res;
   }
 }
 

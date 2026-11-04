@@ -78,6 +78,8 @@ class ProjectModel {
 
   bool get isOpen => status == 'Open';
   bool get isClosed => status == 'Closed';
+  bool get isExpired => deadline != null && deadline!.isBefore(DateTime.now());
+  bool get canApply => isOpen && !isExpired;
 }
 
 class ApplicationModel {

@@ -10,6 +10,7 @@ import '../../providers/app_providers.dart';
 import '../../services/notification_service.dart';
 import '../../providers/chat_provider.dart';
 import '../../widgets/common_widgets.dart';
+import '../../widgets/skeleton_widgets.dart';
 import '../common/cv_document_viewer_screen.dart';
 import '../common/google_drive_picker_modal.dart';
 import '../common/wallet_and_dialogs.dart';
@@ -26,12 +27,12 @@ class FreelancerHomeScreen extends StatefulWidget {
 class _FreelancerHomeScreenState extends State<FreelancerHomeScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = const [
-    JobSearchTab(),
-    MyApplicationsTab(),
-    MyCvsTab(),
-    FreelancerProfileTab(),
-  ];
+  List<Widget> get _pages => [
+        const JobSearchTab(),
+        MyApplicationsTab(onExplore: () => setState(() => _currentIndex = 0)),
+        const MyCvsTab(),
+        const FreelancerProfileTab(),
+      ];
 
   @override
   void initState() {
@@ -44,7 +45,7 @@ class _FreelancerHomeScreenState extends State<FreelancerHomeScreen> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: const Color(0xFF0F172A),
+            backgroundColor: AppColors.secondary,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             duration: const Duration(seconds: 6),
@@ -216,7 +217,7 @@ class _FreelancerHomeScreenState extends State<FreelancerHomeScreen> {
                                 const SizedBox(height: 3),
                                 Text(
                                   item.message,
-                                  style: const TextStyle(fontSize: 12.5, color: Color(0xFF475569), height: 1.3),
+                                  style: const TextStyle(fontSize: 12.5, color: AppColors.slate600, height: 1.3),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
@@ -257,7 +258,7 @@ class _FreelancerHomeScreenState extends State<FreelancerHomeScreen> {
     final credit = context.watch<CreditProvider>();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6F8),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -396,7 +397,7 @@ class _FreelancerHomeScreenState extends State<FreelancerHomeScreen> {
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: Colors.white,
-          border: Border(top: BorderSide(color: Color(0xFFE5E7EB), width: 1)),
+          border: Border(top: BorderSide(color: AppColors.border, width: 1)),
         ),
         child: NavigationBar(
           backgroundColor: Colors.white,
@@ -517,7 +518,7 @@ class _JobSearchTabState extends State<JobSearchTab> {
                         IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => Navigator.pop(ctx)),
                       ],
                     ),
-                    const Divider(height: 1, color: Color(0xFFE5E7EB)),
+                    const Divider(height: 1, color: AppColors.border),
                     const SizedBox(height: 16),
 
                     const Text('Cấp bậc kinh nghiệm:', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: AppColors.textPrimary)),
@@ -595,7 +596,7 @@ class _JobSearchTabState extends State<JobSearchTab> {
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              side: const BorderSide(color: Color(0xFFD1D5DB)),
+                              side: const BorderSide(color: AppColors.borderDark),
                             ),
                             child: const Text('Đặt lại', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                           ),
@@ -668,19 +669,19 @@ class _JobSearchTabState extends State<JobSearchTab> {
                     child: Container(
                       height: 44,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF4F6F8),
+                        color: AppColors.background,
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                        border: Border.all(color: AppColors.border),
                       ),
                       child: TextField(
                         controller: _searchCtrl,
                         decoration: InputDecoration(
                           hintText: 'Tìm việc làm, kỹ năng, công ty...',
-                          hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
+                          hintStyle: const TextStyle(fontSize: 13, color: AppColors.textMuted),
                           prefixIcon: const Icon(Icons.search_rounded, size: 20, color: AppColors.primary),
                           suffixIcon: _searchCtrl.text.isNotEmpty
                               ? IconButton(
-                                  icon: const Icon(Icons.clear_rounded, size: 18, color: Color(0xFF9CA3AF)),
+                                  icon: const Icon(Icons.clear_rounded, size: 18, color: AppColors.textMuted),
                                   onPressed: () {
                                     _searchCtrl.clear();
                                     _applyFilter(search: '');
@@ -701,16 +702,16 @@ class _JobSearchTabState extends State<JobSearchTab> {
                         height: 44,
                         width: 44,
                         decoration: BoxDecoration(
-                          color: _activeFilterCount > 0 ? AppColors.primaryLight : const Color(0xFFF4F6F8),
+                          color: _activeFilterCount > 0 ? AppColors.primaryLight : AppColors.background,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                            color: _activeFilterCount > 0 ? AppColors.primary : const Color(0xFFE5E7EB),
+                            color: _activeFilterCount > 0 ? AppColors.primary : AppColors.border,
                           ),
                         ),
                         child: IconButton(
                           icon: Icon(
                             Icons.tune_rounded,
-                            color: _activeFilterCount > 0 ? AppColors.primary : const Color(0xFF4B5563),
+                            color: _activeFilterCount > 0 ? AppColors.primary : AppColors.textSecondary,
                             size: 20,
                           ),
                           tooltip: 'Bộ lọc',
@@ -759,13 +760,13 @@ class _JobSearchTabState extends State<JobSearchTab> {
                         labelStyle: TextStyle(
                           fontSize: 12,
                           fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                          color: isSelected ? AppColors.primary : const Color(0xFF4B5563),
+                          color: isSelected ? AppColors.primary : AppColors.textSecondary,
                         ),
                         selectedColor: AppColors.primaryLight,
-                        backgroundColor: const Color(0xFFF4F6F8),
+                        backgroundColor: AppColors.background,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
-                          side: BorderSide(color: isSelected ? AppColors.primary : const Color(0xFFE5E7EB)),
+                          side: BorderSide(color: isSelected ? AppColors.primary : AppColors.border),
                         ),
                       ),
                     );
@@ -781,7 +782,7 @@ class _JobSearchTabState extends State<JobSearchTab> {
           child: RefreshIndicator(
             onRefresh: () async => context.read<ProjectProvider>().fetchProjects(),
             child: projectProvider.isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const SkeletonList(type: SkeletonType.jobCard)
                 : projectProvider.projects.isEmpty
                     ? const EmptyStateWidget(
                         icon: Icons.search_off_rounded,
@@ -809,20 +810,21 @@ class _JobSearchTabState extends State<JobSearchTab> {
     final initial = companyName.isNotEmpty ? companyName[0].toUpperCase() : 'H';
     final salaryShort = CurrencyFormatter.formatBudgetShort(p.budgetMin, p.budgetMax);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
+    // Material (not Container) paints the card so the InkWell ripple is
+    // visible; a decorated Container would hide the splash.
+    return Material(
+      color: Colors.white,
+      elevation: 0,
+      shadowColor: const Color(0x14000000),
+      borderRadius: BorderRadius.circular(12),
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
-        ],
+        side: const BorderSide(color: AppColors.border, width: 1),
       ),
       child: InkWell(
+        splashColor: AppColors.primary.withAlpha(25),
+        highlightColor: AppColors.primary.withAlpha(12),
         onTap: () {
           Navigator.push(
             context,
@@ -839,22 +841,28 @@ class _JobSearchTabState extends State<JobSearchTab> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Company Avatar (Rounded Square 44x44)
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF4F6F8),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFE5E7EB)),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      initial,
-                      style: const TextStyle(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 18,
+                  // Company Avatar (Rounded Square 44x44) - Hero to the detail screen
+                  Hero(
+                    tag: 'company-avatar-${p.projectId}',
+                    child: Material(
+                      type: MaterialType.transparency,
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          initial,
+                          style: const TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 18,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -946,7 +954,7 @@ class _JobSearchTabState extends State<JobSearchTab> {
                         style: const TextStyle(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFF475569),
+                          color: AppColors.slate600,
                         ),
                       ),
                     ),
@@ -966,7 +974,7 @@ class _JobSearchTabState extends State<JobSearchTab> {
                       style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w500,
-                        color: p.isExpired ? AppColors.error : const Color(0xFF475569),
+                        color: p.isExpired ? AppColors.error : AppColors.slate600,
                       ),
                     ),
                   ),
@@ -986,7 +994,7 @@ class _JobSearchTabState extends State<JobSearchTab> {
                               return Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFF8FAFC),
+                                  color: AppColors.surfaceSecondary,
                                   borderRadius: BorderRadius.circular(4),
                                   border: Border.all(color: const Color(0xFFE2E8F0)),
                                 ),
@@ -999,7 +1007,7 @@ class _JobSearchTabState extends State<JobSearchTab> {
                           )
                         : Text(
                             '${p.applicantCount} ứng viên đã nộp',
-                            style: const TextStyle(fontSize: 11.5, color: Color(0xFF94A3B8)),
+                            style: const TextStyle(fontSize: 11.5, color: AppColors.slate400),
                           ),
                   ),
                   // Quick Action
@@ -1007,18 +1015,22 @@ class _JobSearchTabState extends State<JobSearchTab> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEFF6FF),
+                        color: AppColors.blue50,
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(color: const Color(0xFFBFDBFE)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.hourglass_top_rounded, size: 12.5, color: Color(0xFF2563EB)),
+                          const Icon(Icons.hourglass_top_rounded, size: 12.5, color: AppColors.blue600),
                           const SizedBox(width: 4),
                           Text(
                             p.myApplicationStatus == 'Reviewing'
                                 ? 'Đang đánh giá'
+                                : (p.myApplicationStatus == 'Accepted'
+                                    ? 'Đã duyệt'
+                                    : (p.myApplicationStatus == 'Rejected' ? 'Từ chối' : 'Chờ xem xét')),
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.blue600),
                                 : (p.myApplicationStatus == 'Accepted' ? 'Đã duyệt' : 'Chờ xem xét'),
                             style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF2563EB)),
                           ),
@@ -1153,7 +1165,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
 
     if (projectProvider.isLoading || project == null) {
       return Scaffold(
-        backgroundColor: const Color(0xFFF4F6F8),
+        backgroundColor: AppColors.background,
         appBar: AppBar(title: const Text('Chi tiết tin tuyển dụng')),
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -1166,7 +1178,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     final salaryShort = CurrencyFormatter.formatBudgetShort(project.budgetMin, project.budgetMax);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6F8),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -1225,18 +1237,24 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                   // Company Card Row
                   Row(
                     children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF4F6F8),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFE5E7EB)),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          initial,
-                          style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w900, fontSize: 16),
+                      Hero(
+                        tag: 'company-avatar-${project.projectId}',
+                        child: Material(
+                          type: MaterialType.transparency,
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: AppColors.background,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              initial,
+                              style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w900, fontSize: 16),
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -1260,7 +1278,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                             ),
                             Text(
                               'Đăng ngày ${CurrencyFormatter.formatDate(project.createdAt)}',
-                              style: const TextStyle(fontSize: 11.5, color: Color(0xFF94A3B8)),
+                              style: const TextStyle(fontSize: 11.5, color: AppColors.slate400),
                             ),
                           ],
                         ),
@@ -1274,9 +1292,9 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
+                      color: AppColors.surfaceSecondary,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFE5E7EB)),
+                      border: Border.all(color: AppColors.border),
                     ),
                     child: Row(
                       children: [
@@ -1389,7 +1407,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                 ],
               ),
             ),
-            const Divider(height: 1, color: Color(0xFFE5E7EB)),
+            const Divider(height: 1, color: AppColors.border),
 
             // Tab Views
             Expanded(
@@ -1403,7 +1421,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                        border: Border.all(color: AppColors.border),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1421,7 +1439,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                             style: const TextStyle(fontSize: 13.5, color: Color(0xFF334155), height: 1.65),
                           ),
                           const SizedBox(height: 20),
-                          const Divider(height: 1, color: Color(0xFFE5E7EB)),
+                          const Divider(height: 1, color: AppColors.border),
                           const SizedBox(height: 16),
                           const Row(
                             children: [
@@ -1433,7 +1451,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                           const SizedBox(height: 8),
                           const Text(
                             '• Phí ứng tuyển: 3 credits/hồ sơ.\n• Mỗi ứng viên nộp 1 lần duy nhất cho tin tuyển dụng này.\n• Hồ sơ CV của bạn sẽ được gửi trực tiếp đến hộp thư quản lý của NTD.',
-                            style: TextStyle(fontSize: 12.5, color: Color(0xFF475569), height: 1.55),
+                            style: TextStyle(fontSize: 12.5, color: AppColors.slate600, height: 1.55),
                           ),
                         ],
                       ),
@@ -1448,7 +1466,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                        border: Border.all(color: AppColors.border),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1488,7 +1506,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                               }).toList(),
                             )
                           else
-                            const Text('Không có yêu cầu kỹ năng cụ thể cho vị trí này.', style: TextStyle(color: Color(0xFF94A3B8))),
+                            const Text('Không có yêu cầu kỹ năng cụ thể cho vị trí này.', style: TextStyle(color: AppColors.slate400)),
                         ],
                       ),
                     ),
@@ -1503,7 +1521,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                         color: project.isContactUnlocked ? const Color(0xFFECFDF5) : const Color(0xFFFFFBEB),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: project.isContactUnlocked ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                          color: project.isContactUnlocked ? const Color(0xFF10B981) : AppColors.accent,
                           width: 1,
                         ),
                       ),
@@ -1631,7 +1649,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                               children: [
                                 const Row(
                                   children: [
-                                    Icon(Icons.lock_rounded, color: Color(0xFFD97706), size: 20),
+                                    Icon(Icons.lock_rounded, color: AppColors.accentDark, size: 20),
                                     SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
@@ -1672,7 +1690,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
               decoration: const BoxDecoration(
                 color: Colors.white,
-                border: Border(top: BorderSide(color: Color(0xFFE5E7EB), width: 1)),
+                border: Border(top: BorderSide(color: AppColors.border, width: 1)),
               ),
               child: Row(
                 children: [
@@ -1683,7 +1701,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                       const Text('Ví hiện có', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
                       Row(
                         children: [
-                          const Icon(Icons.stars_rounded, color: Color(0xFFD97706), size: 15),
+                          const Icon(Icons.stars_rounded, color: AppColors.accentDark, size: 15),
                           const SizedBox(width: 4),
                           Text(
                             '${credit.balance} cr',
@@ -1965,7 +1983,7 @@ class _ApplyModalState extends State<ApplyModal> {
             const SizedBox(height: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(color: const Color(0xFFFEF3C7), borderRadius: BorderRadius.circular(8)),
+              decoration: BoxDecoration(color: AppColors.accentLight, borderRadius: BorderRadius.circular(8)),
               child: Row(
                 children: [
                   const Icon(Icons.info_outline_rounded, color: Color(0xFFB45309), size: 16),
@@ -2025,7 +2043,7 @@ class _ApplyModalState extends State<ApplyModal> {
                         color: isSelected ? AppColors.primaryLight : Colors.white,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: isSelected ? AppColors.primary : const Color(0xFFE5E7EB),
+                          color: isSelected ? AppColors.primary : AppColors.border,
                           width: isSelected ? 1.5 : 1,
                         ),
                       ),
@@ -2033,7 +2051,7 @@ class _ApplyModalState extends State<ApplyModal> {
                         children: [
                           Icon(
                             isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
-                            color: isSelected ? AppColors.primary : const Color(0xFF9CA3AF),
+                            color: isSelected ? AppColors.primary : AppColors.textMuted,
                             size: 18,
                           ),
                           const SizedBox(width: 10),
@@ -2050,7 +2068,7 @@ class _ApplyModalState extends State<ApplyModal> {
                                 ),
                                 Text(
                                   CurrencyFormatter.formatFileSize(d.fileSize),
-                                  style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                                  style: const TextStyle(fontSize: 11, color: AppColors.slate400),
                                 ),
                               ],
                             ),
@@ -2104,8 +2122,8 @@ class _ApplyModalState extends State<ApplyModal> {
                     padding: const EdgeInsets.only(right: 6, bottom: 6),
                     child: ActionChip(
                       label: Text(t, style: const TextStyle(fontSize: 11)),
-                      backgroundColor: const Color(0xFFF4F6F8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6), side: const BorderSide(color: Color(0xFFE5E7EB))),
+                      backgroundColor: AppColors.background,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6), side: const BorderSide(color: AppColors.border)),
                       onPressed: () {
                         if (_coverLetterCtrl.text.isEmpty) {
                           _coverLetterCtrl.text = t;
@@ -2124,11 +2142,11 @@ class _ApplyModalState extends State<ApplyModal> {
               maxLines: 3,
               decoration: InputDecoration(
                 hintText: 'Giới thiệu ngắn gọn kinh nghiệm liên quan và cam kết của bạn đối với vị trí này...',
-                hintStyle: const TextStyle(fontSize: 12.5, color: Color(0xFF9CA3AF)),
+                hintStyle: const TextStyle(fontSize: 12.5, color: AppColors.textMuted),
                 filled: true,
-                fillColor: const Color(0xFFF8FAFC),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+                fillColor: AppColors.surfaceSecondary,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
                 focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.primary)),
               ),
             ),
@@ -2154,7 +2172,10 @@ class _ApplyModalState extends State<ApplyModal> {
 }
 
 class MyApplicationsTab extends StatefulWidget {
-  const MyApplicationsTab({super.key});
+  /// Called by the empty state button to jump to the "Tìm việc" tab.
+  final VoidCallback? onExplore;
+
+  const MyApplicationsTab({super.key, this.onExplore});
 
   @override
   State<MyApplicationsTab> createState() => _MyApplicationsTabState();
@@ -2202,7 +2223,7 @@ class _MyApplicationsTabState extends State<MyApplicationsTab> {
               if (app.statusHistories.isEmpty)
                 Container(
                   padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(8)),
+                  decoration: BoxDecoration(color: AppColors.surfaceSecondary, borderRadius: BorderRadius.circular(8)),
                   child: const Row(
                     children: [
                       Icon(Icons.hourglass_top_rounded, color: AppColors.warning, size: 18),
@@ -2239,7 +2260,7 @@ class _MyApplicationsTabState extends State<MyApplicationsTab> {
                               ),
                               Text(
                                 '${CurrencyFormatter.formatDate(h.changedAt)} • Thực hiện bởi ${h.changedByUserName}',
-                                style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                                style: const TextStyle(fontSize: 11, color: AppColors.slate400),
                               ),
                             ],
                           ),
@@ -2287,7 +2308,7 @@ class _MyApplicationsTabState extends State<MyApplicationsTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: AppColors.surfaceSecondary,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -2334,7 +2355,7 @@ class _MyApplicationsTabState extends State<MyApplicationsTab> {
                     fontWeight: isCurrent ? FontWeight.w800 : FontWeight.w500,
                     color: isCurrent
                         ? (isRejected && stepIndex == 3 ? AppColors.error : AppColors.primary)
-                        : (isCompleted ? AppColors.textPrimary : const Color(0xFF94A3B8)),
+                        : (isCompleted ? AppColors.textPrimary : AppColors.slate400),
                   ),
                 ),
               ],
@@ -2350,7 +2371,7 @@ class _MyApplicationsTabState extends State<MyApplicationsTab> {
     final appProvider = context.watch<ApplicationProvider>();
 
     if (appProvider.isLoading && appProvider.myApplications.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const SkeletonList(type: SkeletonType.applicationCard, itemCount: 4);
     }
 
     final filtered = _statusFilter == null
@@ -2382,11 +2403,20 @@ class _MyApplicationsTabState extends State<MyApplicationsTab> {
           child: RefreshIndicator(
             onRefresh: () => appProvider.fetchMyApplications(),
             child: filtered.isEmpty
-                ? const EmptyStateWidget(
-                    icon: Icons.assignment_outlined,
-                    title: 'Chưa có hồ sơ ứng tuyển nào',
-                    subtitle: 'Hãy khám phá các dự án IT hấp dẫn trong tab "Tìm việc" và nộp hồ sơ ngay.',
-                  )
+                ? (_statusFilter == null
+                    ? EmptyStateWidget(
+                        icon: Icons.assignment_outlined,
+                        title: 'Chưa có hồ sơ ứng tuyển nào',
+                        subtitle: 'Hãy khám phá các dự án IT hấp dẫn trong tab "Tìm việc" và nộp hồ sơ ngay.',
+                        buttonText: widget.onExplore == null ? null : 'Khám phá dự án',
+                        buttonIcon: Icons.explore_outlined,
+                        onButtonPressed: widget.onExplore,
+                      )
+                    : const EmptyStateWidget(
+                        icon: Icons.filter_alt_off_outlined,
+                        title: 'Không có hồ sơ ở trạng thái này',
+                        subtitle: 'Hãy chọn "Tất cả" hoặc một trạng thái khác để xem các hồ sơ còn lại.',
+                      ))
                 : ListView.separated(
                     padding: const EdgeInsets.all(12),
                     itemCount: filtered.length,
@@ -2397,7 +2427,7 @@ class _MyApplicationsTabState extends State<MyApplicationsTab> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE5E7EB)),
+                          border: Border.all(color: AppColors.border),
                           boxShadow: const [
                             BoxShadow(color: Color(0x06000000), blurRadius: 6, offset: Offset(0, 2)),
                           ],
@@ -2428,13 +2458,13 @@ class _MyApplicationsTabState extends State<MyApplicationsTab> {
                                   Expanded(
                                     child: Text(
                                       'CV nộp: ${app.originalFileName}',
-                                      style: const TextStyle(fontSize: 12, color: Color(0xFF475569), fontWeight: FontWeight.w600),
+                                      style: const TextStyle(fontSize: 12, color: AppColors.slate600, fontWeight: FontWeight.w600),
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                   Text(
                                     CurrencyFormatter.formatDate(app.appliedAt),
-                                    style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                                    style: const TextStyle(fontSize: 11, color: AppColors.slate400),
                                   ),
                                 ],
                               ),
@@ -2442,10 +2472,10 @@ class _MyApplicationsTabState extends State<MyApplicationsTab> {
                                 const SizedBox(height: 8),
                                 Container(
                                   padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(6)),
+                                  decoration: BoxDecoration(color: AppColors.surfaceSecondary, borderRadius: BorderRadius.circular(6)),
                                   child: Text(
                                     '"${app.coverLetter!}"',
-                                    style: const TextStyle(fontSize: 11.5, fontStyle: FontStyle.italic, color: Color(0xFF475569)),
+                                    style: const TextStyle(fontSize: 11.5, fontStyle: FontStyle.italic, color: AppColors.slate600),
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -2455,7 +2485,7 @@ class _MyApplicationsTabState extends State<MyApplicationsTab> {
                               // TopCV 4-Stage Progress Tracker
                               _buildTopCvApplicationProgressTracker(app.status),
                               const SizedBox(height: 10),
-                              const Divider(height: 1, color: Color(0xFFE5E7EB)),
+                              const Divider(height: 1, color: AppColors.border),
                               const SizedBox(height: 8),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.end,
@@ -2466,8 +2496,8 @@ class _MyApplicationsTabState extends State<MyApplicationsTab> {
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                       visualDensity: VisualDensity.compact,
                                     ),
-                                    icon: const Icon(Icons.timeline_rounded, size: 15, color: Color(0xFF475569)),
-                                    label: const Text('Tiến trình chi tiết', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF475569))),
+                                    icon: const Icon(Icons.timeline_rounded, size: 15, color: AppColors.slate600),
+                                    label: const Text('Tiến trình chi tiết', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.slate600)),
                                   ),
                                   const SizedBox(width: 6),
                                   InkWell(
@@ -2544,13 +2574,13 @@ class _MyApplicationsTabState extends State<MyApplicationsTab> {
         labelStyle: TextStyle(
           fontSize: 11.5,
           fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-          color: isSelected ? AppColors.primary : const Color(0xFF4B5563),
+          color: isSelected ? AppColors.primary : AppColors.textSecondary,
         ),
         selectedColor: AppColors.primaryLight,
-        backgroundColor: const Color(0xFFF4F6F8),
+        backgroundColor: AppColors.background,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(6),
-          side: BorderSide(color: isSelected ? AppColors.primary : const Color(0xFFE5E7EB)),
+          side: BorderSide(color: isSelected ? AppColors.primary : AppColors.border),
         ),
       ),
     );
@@ -2663,7 +2693,7 @@ class _MyCvsTabState extends State<MyCvsTab> {
     final docProvider = context.watch<DocumentProvider>();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6F8),
+      backgroundColor: AppColors.background,
       body: RefreshIndicator(
         onRefresh: () => docProvider.fetchCvs(),
         child: SingleChildScrollView(
@@ -2678,7 +2708,7 @@ class _MyCvsTabState extends State<MyCvsTab> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                  border: Border.all(color: AppColors.border),
                   boxShadow: const [
                     BoxShadow(color: Color(0x06000000), blurRadius: 6, offset: Offset(0, 2)),
                   ],
@@ -2748,12 +2778,15 @@ class _MyCvsTabState extends State<MyCvsTab> {
               const SizedBox(height: 10),
 
               if (docProvider.isLoading && docProvider.cvs.isEmpty)
-                const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()))
+                const SkeletonList(type: SkeletonType.listTile, itemCount: 3, shrinkWrap: true)
               else if (docProvider.cvs.isEmpty)
-                const EmptyStateWidget(
+                EmptyStateWidget(
                   icon: Icons.description_outlined,
                   title: 'Chưa có CV nào được tải lên',
                   subtitle: 'Hãy tải lên bản CV PDF đầu tiên để bắt đầu ứng tuyển các công việc IT hấp dẫn.',
+                  buttonText: _isUploading ? null : 'Tải CV lên',
+                  buttonIcon: Icons.upload_file_rounded,
+                  onButtonPressed: _isUploading ? null : _pickAndUpload,
                 )
               else
                 ListView.separated(
@@ -2768,7 +2801,7 @@ class _MyCvsTabState extends State<MyCvsTab> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: cv.isDefault ? AppColors.primary : const Color(0xFFE5E7EB),
+                          color: cv.isDefault ? AppColors.primary : AppColors.border,
                           width: cv.isDefault ? 1.4 : 1.0,
                         ),
                       ),
@@ -2777,10 +2810,10 @@ class _MyCvsTabState extends State<MyCvsTab> {
                         leading: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFEE2E2),
+                            color: AppColors.errorLight,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(Icons.picture_as_pdf_rounded, color: Color(0xFFDC2626), size: 22),
+                          child: const Icon(Icons.picture_as_pdf_rounded, color: AppColors.red600, size: 22),
                         ),
                         title: Row(
                           children: [
@@ -2803,7 +2836,7 @@ class _MyCvsTabState extends State<MyCvsTab> {
                         ),
                         subtitle: Text(
                           '${CurrencyFormatter.formatFileSize(cv.fileSize)} • Tải lên: ${CurrencyFormatter.formatDate(cv.uploadedAt)}',
-                          style: const TextStyle(fontSize: 11.5, color: Color(0xFF94A3B8)),
+                          style: const TextStyle(fontSize: 11.5, color: AppColors.slate400),
                         ),
                         trailing: PopupMenuButton<String>(
                           onSelected: (val) async {
@@ -3080,7 +3113,7 @@ class _FreelancerProfileTabState extends State<FreelancerProfileTab> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE5E7EB)),
+              border: Border.all(color: AppColors.border),
               boxShadow: const [
                 BoxShadow(color: Color(0x06000000), blurRadius: 6, offset: Offset(0, 2)),
               ],
@@ -3106,7 +3139,7 @@ class _FreelancerProfileTabState extends State<FreelancerProfileTab> {
                 ),
                 Text(
                   auth.user?.email ?? '',
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                  style: const TextStyle(fontSize: 12, color: AppColors.slate400),
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
@@ -3130,7 +3163,7 @@ class _FreelancerProfileTabState extends State<FreelancerProfileTab> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE5E7EB)),
+              border: Border.all(color: AppColors.border),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -3153,18 +3186,18 @@ class _FreelancerProfileTabState extends State<FreelancerProfileTab> {
                     children: p!.skills.map((s) {
                       return Chip(
                         label: Text(s, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600)),
-                        backgroundColor: const Color(0xFFF4F6F8),
+                        backgroundColor: AppColors.background,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6), side: BorderSide.none),
                       );
                     }).toList(),
                   )
                 else
-                  const Text('Chưa có kỹ năng nào. Nhấn "Chỉnh sửa hồ sơ" để thêm.', style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
+                  const Text('Chưa có kỹ năng nào. Nhấn "Chỉnh sửa hồ sơ" để thêm.', style: TextStyle(fontSize: 12, color: AppColors.slate400)),
                 if (p?.bio != null && p!.bio!.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   const Text('Giới thiệu tóm tắt:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
                   const SizedBox(height: 4),
-                  Text(p.bio!, style: const TextStyle(fontSize: 12.5, color: Color(0xFF475569), height: 1.4)),
+                  Text(p.bio!, style: const TextStyle(fontSize: 12.5, color: AppColors.slate600, height: 1.4)),
                 ],
               ],
             ),
@@ -3176,7 +3209,7 @@ class _FreelancerProfileTabState extends State<FreelancerProfileTab> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE5E7EB)),
+              border: Border.all(color: AppColors.border),
             ),
             child: Column(
               children: [
@@ -3187,19 +3220,19 @@ class _FreelancerProfileTabState extends State<FreelancerProfileTab> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       CreditBadge(balance: credit.balance, isLarge: false),
-                      const Icon(Icons.chevron_right, color: Color(0xFF94A3B8), size: 18),
+                      const Icon(Icons.chevron_right, color: AppColors.slate400, size: 18),
                     ],
                   ),
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen())),
                 ),
-                const Divider(height: 1, indent: 16, endIndent: 16, color: Color(0xFFE5E7EB)),
+                const Divider(height: 1, indent: 16, endIndent: 16, color: AppColors.border),
                 ListTile(
                   leading: const Icon(Icons.lock_outline, color: Color(0xFF64748B), size: 20),
                   title: const Text('Đổi mật khẩu', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5)),
-                  trailing: const Icon(Icons.chevron_right, color: Color(0xFF94A3B8), size: 18),
+                  trailing: const Icon(Icons.chevron_right, color: AppColors.slate400, size: 18),
                   onTap: () => showDialog(context: context, builder: (_) => const ChangePasswordDialog()),
                 ),
-                const Divider(height: 1, indent: 16, endIndent: 16, color: Color(0xFFE5E7EB)),
+                const Divider(height: 1, indent: 16, endIndent: 16, color: AppColors.border),
                 ListTile(
                   leading: const Icon(Icons.logout, color: Colors.red, size: 20),
                   title: const Text('Đăng xuất tài khoản', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5, color: Colors.red)),
